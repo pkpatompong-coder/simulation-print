@@ -1,0 +1,1012 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}</style>
+</head>
+<body>
+<title>แล็บซ่อมอิงก์แท็งก์</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap">
+<style>
+/* Layout: 3D service bench on the left, a case-file panel down the right; stacks on phones. Accent = cyan ink. */
+:root{
+  --bg:#eef1f3; --surface:#fbfcfc; --ink:#182027; --muted:#596673; --line:#d2d9de; --chip:#e5eaee;
+  --accent:#0084a6; --accent-ink:#ffffff; --hot:#c4361c; --ok:#22803a; --warn:#965a00;
+  --stage:#dce3e8; --glass:rgba(251,252,252,.92);
+  --f-display:"Chakra Petch","IBM Plex Sans Thai",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans Thai",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1215; --surface:#161c21; --ink:#e3e9ee; --muted:#93a1ad; --line:#2a333b; --chip:#1f272e;
+  --accent:#3fc1e2; --accent-ink:#04161c; --hot:#ff7a4d; --ok:#5ec774; --warn:#e7a43f;
+  --stage:#0c1013; --glass:rgba(22,28,33,.92); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1215; --surface:#161c21; --ink:#e3e9ee; --muted:#93a1ad; --line:#2a333b; --chip:#1f272e;
+  --accent:#3fc1e2; --accent-ink:#04161c; --hot:#ff7a4d; --ok:#5ec774; --warn:#e7a43f;
+  --stage:#0c1013; --glass:rgba(22,28,33,.92); color-scheme:dark}
+
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:400 15px/1.55 var(--f-body)}
+button{font-family:inherit;color:inherit}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 400px;height:100%}
+
+/* stage */
+.stage{position:relative;min-width:0;background:var(--stage);overflow:hidden}
+.stage canvas{display:block;width:100%;height:100%;touch-action:none}
+.hud-l{position:absolute;top:12px;left:calc(12px + env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:6px;align-items:flex-start;pointer-events:none;max-width:calc(100% - 230px)}
+.hud-r{position:absolute;top:12px;right:calc(12px + env(safe-area-inset-right,0px));display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:220px}
+.views{position:absolute;left:calc(12px + env(safe-area-inset-left,0px));right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.chip{display:inline-block;background:var(--glass);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:12.5px}
+.chip b{color:var(--ink);font-weight:600}
+.hbtn{flex:none;background:var(--glass);border:1px solid var(--line);border-radius:8px;padding:6px 11px;font:500 13px var(--f-body);cursor:pointer;white-space:nowrap}
+.hbtn:hover{border-color:var(--accent)}
+.hbtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font:500 13px var(--f-body);padding:4px 10px;border-radius:6px;white-space:nowrap;transform:translate(14px,14px);z-index:3}
+.toast{position:absolute;left:50%;bottom:calc(58px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:max-content;max-width:min(560px,calc(100% - 32px));background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:flex-start;box-shadow:0 10px 30px rgba(0,0,0,.2);font-size:14px;z-index:2}
+.lbl{position:absolute;pointer-events:none;font:600 11.5px var(--f-body);background:var(--ink);color:var(--bg);padding:2px 8px;border-radius:4px;transform:translate(-50%,-130%);white-space:nowrap;opacity:.92}
+.lbl::after{content:"";position:absolute;left:50%;bottom:-4px;width:7px;height:7px;background:inherit;transform:translateX(-50%) rotate(45deg)}
+.tag{flex:none;font:600 12px var(--f-display);letter-spacing:.04em;padding:2px 8px;border-radius:5px;color:var(--accent-ink);background:var(--accent)}
+.tag.ok{background:var(--ok);color:#fff}.tag.warn{background:var(--warn);color:#fff}.tag.hot{background:var(--hot);color:#fff}
+
+/* panel */
+.panel{background:var(--surface);border-left:1px solid var(--line);overflow-y:auto;display:flex;flex-direction:column;gap:20px;padding-block:22px 28px;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
+.eyebrow{margin:0;font:500 12px var(--f-mono);letter-spacing:.06em;color:var(--muted)}
+h1{margin:2px 0 6px;font:700 28px/1.15 var(--f-display);text-wrap:balance}
+.lede{margin:0;color:var(--muted);font-size:14px;max-width:62ch}
+.sh{margin:0 0 8px;font:600 13px var(--f-display);letter-spacing:.05em;color:var(--muted)}
+.cases{display:flex;flex-direction:column;gap:6px}
+.case{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:center;text-align:left;background:transparent;border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer}
+.case:hover{border-color:var(--accent)}
+.case[aria-pressed="true"]{border-color:var(--accent);background:var(--chip)}
+.case .n{font:600 13px var(--f-mono);color:var(--accent)}
+.case .t{font-weight:600;font-size:14.5px;line-height:1.3}
+.case .s{font-size:12.5px;color:var(--muted)}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.seg button{font:600 14px var(--f-body);border:0;border-radius:7px;padding:8px;background:transparent;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.gauges{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.g{background:var(--surface);padding:9px 12px;min-width:0}
+.g .l{font-size:12px;color:var(--muted)}
+.g .v{font:600 20px/1.25 var(--f-mono);font-variant-numeric:tabular-nums}
+.g .v.sm{font:600 14px/1.6 var(--f-body)}
+.file{display:grid;grid-template-columns:96px minmax(0,1fr);gap:14px;align-items:start}
+.file canvas{width:96px;height:auto;border-radius:2px;box-shadow:0 1px 2px rgba(0,0,0,.2),0 6px 14px rgba(0,0,0,.12);background:#fff}
+.file h2{margin:2px 0 4px;font:700 19px/1.25 var(--f-display)}
+.file p{margin:0;font-size:14px}
+.no{font:600 12px var(--f-mono);color:var(--muted);letter-spacing:.04em}
+.quiz p{margin:0 0 8px}
+.opts{display:flex;flex-direction:column;gap:6px}
+.opt{text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:14px;cursor:pointer}
+.opt:hover{border-color:var(--accent)}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.steps li{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:start;padding:6px 8px;border-radius:8px}
+.num{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:600 12px var(--f-mono);border:1.5px solid var(--line);color:var(--muted)}
+.steps .t{font-weight:500;font-size:14.5px}
+.steps .h{font-size:13px;color:var(--muted);margin-top:2px}
+.steps li.done .num{background:var(--ok);border-color:var(--ok);color:#fff}
+.steps li.done .t{color:var(--muted)}
+.steps li.now{background:var(--chip)}
+.steps li.now .num{border-color:var(--accent);color:var(--accent)}
+.steps li.now .t{font-weight:600}
+.steps li.todo .t{color:var(--muted)}
+.locked{font-size:13.5px;color:var(--muted);margin:0}
+.util{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.ub{text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:7px 10px;cursor:pointer}
+.ub:hover{border-color:var(--accent)}
+.ub .t{display:block;font-weight:600;font-size:13.5px;line-height:1.3}
+.ub .s{display:block;font:500 11px var(--f-mono);color:var(--muted)}
+.ub.hint{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+.tools{display:flex;flex-wrap:wrap;gap:6px}
+.tb{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:13px;cursor:pointer}
+.tb i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.tb[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tb.hint{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+.msg{display:flex;gap:10px;align-items:flex-start;font-size:14px;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.result{border:2px solid var(--accent);border-radius:12px;padding:14px 16px}
+.result h2{margin:0;font:700 22px var(--f-display)}
+.result dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:10px 0}
+.result dt{color:var(--muted);font-size:14px}.result dd{margin:0;font:500 14px var(--f-mono);font-variant-numeric:tabular-nums}
+.result p{margin:0;font-size:14px}
+.xrb{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.xrb button{font:600 14px var(--f-body);border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:10px;padding:10px 8px;cursor:pointer}
+.xrb button:disabled{border-color:var(--line);color:var(--muted);cursor:not-allowed}
+.foot{font-size:12.5px;color:var(--muted);margin:8px 0 0}
+.reset{font:600 14px var(--f-body);background:transparent;border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer}
+.reset:hover{border-color:var(--accent);color:var(--accent)}
+#xrOverlay{position:fixed;inset:auto 0 0 0;padding:12px 16px calc(16px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;align-items:center;background:rgba(10,14,17,.8);color:#fff;font:500 14px var(--f-body)}
+#xrOverlay span{flex:1}
+#xrOverlay button{background:#fff;color:#111;border:0;border-radius:8px;padding:8px 12px;font-weight:600}
+.case .best{font:600 11.5px var(--f-mono);color:var(--ok);margin-left:8px}
+.case.mys{border-style:dashed}
+.mlist{margin:6px 0 0;padding-left:18px;font-size:13.5px;display:flex;flex-direction:column;gap:4px}
+.mlist .hot{color:var(--hot)}.mlist .warn{color:var(--warn)}
+.rbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.rbtns button{font:600 14px var(--f-body);border-radius:9px;padding:8px 12px;cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink)}
+.rbtns button.sec{background:transparent;color:var(--accent)}
+.replay{position:absolute;top:56px;left:50%;transform:translateX(-50%);display:flex;gap:10px;align-items:center;background:var(--hot);color:#fff;border-radius:999px;padding:5px 6px 5px 14px;font:600 13px var(--f-body);z-index:3;white-space:nowrap}
+.replay button{background:#fff;color:#111;border:0;border-radius:999px;padding:4px 12px;font:600 12.5px var(--f-body);cursor:pointer}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr;height:auto}
+  .stage{height:62vh;min-height:380px}
+  .panel{border-left:0;border-top:1px solid var(--line);overflow:visible}
+  .hud-l{max-width:calc(100% - 24px)}
+  .hud-r{top:auto;bottom:calc(52px + env(safe-area-inset-bottom,0px));max-width:none}
+  .toast{bottom:calc(98px + env(safe-area-inset-bottom,0px))}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <section class="stage" id="stage" aria-label="ฉากสามมิติของเครื่องพิมพ์อิงก์แท็งก์">
+    <div class="hud-l">
+      <span class="chip">คลิกชิ้นส่วนเพื่อลงมือ · ลากเพื่อหมุน · เลื่อนเพื่อซูม</span>
+      <span class="chip">ในมือ: <b id="handChip">มือเปล่า</b></span>
+    </div>
+    <div class="hud-r">
+      <button class="hbtn" id="tXray" aria-pressed="false">เอกซเรย์</button>
+      <button class="hbtn" id="tLabels" aria-pressed="false">ป้ายชื่อ</button>
+      <button class="hbtn" id="tVoice" aria-pressed="true">เสียงพากย์</button>
+      <button class="hbtn" id="tSound" aria-pressed="true">เสียงเครื่อง</button>
+    </div>
+    <div class="views" id="views"></div>
+    <div id="labels"></div>
+    <div class="tip" id="tip" hidden></div>
+    <div class="replay" id="replayBar" hidden><span>▶ เล่นย้อนหลัง</span><span id="rpInfo"></span><button id="rpStop">หยุด</button></div>
+    <div class="toast" id="toast" hidden><span class="tag" id="toastTag"></span><span id="toastText"></span></div>
+  </section>
+
+  <aside class="panel">
+    <header>
+      <p class="eyebrow">ศูนย์ฝึกซ่อม · เครื่องพิมพ์อิงก์แท็งก์</p>
+      <h1>แล็บซ่อมอิงก์แท็งก์</h1>
+      <p class="lede">ห้าเคสจากอาการที่พบบ่อยของเครื่องพิมพ์อิงก์แท็งก์รุ่น L220/L230 วินิจฉัยสาเหตุก่อน แล้วลงมือซ่อมกับเครื่องจำลอง ใช้ทั้งปุ่มบนเครื่อง อุปกรณ์บนโต๊ะ และโปรแกรมบนโน้ตบุ๊ก</p>
+    </header>
+
+    <section><h2 class="sh">เลือกเคส</h2><div class="cases" id="cases"></div></section>
+
+    <div class="seg" role="group" aria-label="โหมด">
+      <button id="mPractice" aria-pressed="true">โหมดฝึก (มีคำใบ้)</button>
+      <button id="mTest" aria-pressed="false">โหมดทดสอบ</button>
+    </div>
+
+    <div class="gauges">
+      <div class="g"><div class="l">คะแนน</div><div class="v" id="gScore">100</div></div>
+      <div class="g"><div class="l">เวลา</div><div class="v" id="gTime">00:00</div></div>
+      <div class="g"><div class="l">ความคืบหน้า</div><div class="v sm" id="gProg">วินิจฉัย</div></div>
+      <div class="g"><div class="l">สถานะไฟ</div><div class="v sm" id="gPower">เปิด · เสียบปลั๊ก</div></div>
+    </div>
+
+    <section class="file">
+      <canvas id="thumb" width="300" height="424" aria-label="ตัวอย่างอาการ"></canvas>
+      <div><span class="no" id="caseNo"></span><h2 id="caseTitle"></h2><p id="caseSym"></p></div>
+    </section>
+
+    <section class="quiz" id="quizBox"><h2 class="sh">ขั้นแรก: วินิจฉัยสาเหตุ</h2><p id="quizQ"></p><div class="opts" id="quizOpts"></div></section>
+
+    <section><h2 class="sh">ขั้นตอนการซ่อม</h2><ol class="steps" id="steps"></ol></section>
+
+    <section><h2 class="sh">โปรแกรมบนโน้ตบุ๊ก</h2><div class="util" id="util"></div></section>
+
+    <section><h2 class="sh">อุปกรณ์ในมือ</h2><div class="tools" id="tools"></div></section>
+
+    <div class="msg"><span class="tag" id="msgTag">เริ่ม</span><span id="msgText">กำลังโหลดฉาก…</span></div>
+
+    <div class="result" id="result" hidden></div>
+
+    <section>
+      <h2 class="sh">ดูแบบ AR / VR</h2>
+      <div class="xrb"><button id="btnAR" disabled>วางบนโต๊ะจริง (AR)</button><button id="btnVR" disabled>เข้าห้องฝึก VR</button></div>
+      <p class="foot" id="xrNote">กำลังตรวจอุปกรณ์…</p>
+    </section>
+
+    <button class="reset" id="reset">เริ่มเคสนี้ใหม่</button>
+  </aside>
+</div>
+<div id="xrOverlay" hidden><span id="xrMsg">แตะพื้นโต๊ะเพื่อวางเครื่องพิมพ์</span><button id="xrExit">ออกจาก AR</button></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/environments/RoomEnvironment.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+if(!window.THREE||!THREE.OrbitControls||!THREE.RoundedBoxGeometry){$('msgText').textContent='โหลดไลบรารีสามมิติไม่สำเร็จ ลองรีเฟรชหน้าอีกครั้ง';return;}
+if(THREE.ColorManagement)THREE.ColorManagement.legacyMode=false;
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const stage=$('stage');
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/* ================= renderer & scene ================= */
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.xr.enabled=true;
+stage.prepend(renderer.domElement);
+
+const scene=new THREE.Scene();
+const pmrem=new THREE.PMREMGenerator(renderer);
+scene.environment=pmrem.fromScene(new THREE.RoomEnvironment(),0.04).texture;
+
+const camera=new THREE.PerspectiveCamera(38,1,0.02,200);
+const controls=new THREE.OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;controls.minDistance=2.2;controls.maxDistance=26;controls.maxPolarAngle=Math.PI*0.47;
+const VIEWS={
+  overview:['ภาพรวม',[8,7,11],[0,0.9,0.9]],
+  front:['ด้านหน้า',[0,3.2,9.4],[0,0.9,0.9]],
+  tanks:['แท็งก์หมึก',[6,2.6,5.6],[2.6,0.7,0.5]],
+  rear:['ด้านหลัง',[2.4,5.6,-7.6],[0,1.2,-1]],
+  top:['มองจากบน',[0.3,8.6,3.4],[0,0.9,0]],
+  laptop:['โน้ตบุ๊ก',[-3.6,3.6,7],[-5.6,0.9,1.5]],
+  tools:['อุปกรณ์',[6.2,4.4,8.2],[5.2,0.3,2.6]]
+};
+camera.position.set(...VIEWS.overview[1]);controls.target.set(...VIEWS.overview[2]);controls.update();
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x3c4248,0.35));
+const sun=new THREE.DirectionalLight(0xfff3e4,1.7);
+sun.position.set(6,12,8);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-10,right:10,top:10,bottom:-10,near:1,far:40});
+sun.shadow.bias=-0.0004;sun.shadow.normalBias=0.02;
+scene.add(sun);
+const rim=new THREE.DirectionalLight(0xcfe8ff,0.4);rim.position.set(-8,5,-6);scene.add(rim);
+
+const rig=new THREE.Group();scene.add(rig);
+
+/* ================= helpers ================= */
+const std=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.6,metalness:0},o||{}));
+const phys=(c,o)=>new THREE.MeshPhysicalMaterial(Object.assign({color:c,roughness:.5,metalness:0},o||{}));
+const RB=(w,h,d,r)=>new THREE.RoundedBoxGeometry(w,h,d,3,Math.min(r,Math.min(w,h,d)/2-0.002));
+const BX=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
+const CY=(a,b,h,s)=>new THREE.CylinderGeometry(a,b,h,s||32);
+function add(geo,m,p,parent,shell){const me=new THREE.Mesh(geo,m);me.position.set(p[0],p[1],p[2]);me.castShadow=me.receiveShadow=true;(parent||rig).add(me);if(shell)me.userData.shell=true;return me;}
+function group(p,parent){const g=new THREE.Group();g.position.set(p[0],p[1],p[2]);(parent||rig).add(g);return g;}
+function canvasTex(c){const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=8;return t;}
+
+/* ================= desk ================= */
+function woodCanvas(){const c=document.createElement('canvas');c.width=c.height=1024;const g=c.getContext('2d');
+  g.fillStyle='#a8754a';g.fillRect(0,0,1024,1024);
+  for(let i=0;i<300;i++){const y=Math.random()*1024;g.strokeStyle=`rgba(${60+Math.random()*50|0},${36+Math.random()*24|0},18,${0.06+Math.random()*0.18})`;
+    g.lineWidth=1+Math.random()*3;g.beginPath();g.moveTo(0,y);for(let x=0;x<=1024;x+=32)g.lineTo(x,y+Math.sin(x*0.006+i)*6+Math.sin(x*0.021+i*3)*2);g.stroke();}
+  return c;}
+const woodTex=canvasTex(woodCanvas());woodTex.wrapS=woodTex.wrapT=THREE.RepeatWrapping;woodTex.repeat.set(2,1.4);
+const deskGroup=group([0,0,0]);
+const desk=add(BX(17.5,0.3,11),std(0xffffff,{map:woodTex,roughness:.5}),[0,-0.15,1.4],deskGroup);desk.castShadow=false;
+[[-8.2,-3.6],[8.2,-3.6],[-8.2,6.4],[8.2,6.4]].forEach(([x,z])=>add(BX(0.45,7.2,0.45),std(0x2b2f33,{metalness:.6,roughness:.4}),[x,-3.9,z],deskGroup));
+const arShadow=new THREE.Mesh(new THREE.PlaneGeometry(14,10).rotateX(-Math.PI/2),new THREE.ShadowMaterial({opacity:.32}));
+arShadow.position.y=0.002;arShadow.receiveShadow=true;arShadow.visible=false;rig.add(arShadow);
+
+/* ================= printer ================= */
+const P=group([0,0,0]);
+const mBody=phys(0x1d2025,{roughness:.6,clearcoat:.25,clearcoatRoughness:.55});
+const mGloss=phys(0x0e1013,{roughness:.18,clearcoat:1,clearcoatRoughness:.06});
+const mTankH=phys(0x2a2f35,{roughness:.55,clearcoat:.2});
+const SHELL=[mBody,mGloss,mTankH];
+const mInner=std(0x141619,{roughness:.95});
+const mMetal=std(0xc6ccd2,{metalness:.85,roughness:.28});
+const mRubber=std(0x101113,{roughness:.95});
+const INKHEX={K:0x1a1a1c,C:0x00a3d9,M:0xd8006f,Y:0xffcf00};
+const ORDER=['K','C','M','Y'];
+
+// base housing (hollow)
+add(RB(4.4,0.12,2.9,.05),mBody,[0,0.06,0],P,true);
+add(RB(4.4,0.56,0.12,.04),mBody,[0,0.40,1.39],P,true);
+add(RB(4.4,0.30,0.12,.04),mGloss,[0,0.95,1.39],P,true);
+add(RB(4.4,0.98,0.12,.04),mBody,[0,0.61,-1.39],P,true);
+add(RB(0.12,0.98,2.9,.04),mBody,[-2.14,0.61,0],P,true);
+add(RB(0.12,0.98,2.9,.04),mBody,[2.14,0.61,0],P,true);
+add(RB(4.4,0.06,0.14,.02),mBody,[0,1.07,-1.38],P,true);
+add(BX(4.1,0.02,2.7),mInner,[0,0.13,0]);
+// inner mechanics
+add(BX(3.6,0.04,1.7),mInner,[0,0.70,0.35],P);
+add(BX(3.4,0.10,0.10),mInner,[0,0.72,1.32],P);
+const rail=add(CY(0.035,0.035,3.9),mMetal,[0,1.0,-0.15],P);rail.rotation.z=Math.PI/2;
+const carriage=group([1.6,1.0,-0.15],P);
+add(RB(0.72,0.36,0.64,.05),std(0x434951,{roughness:.45}),[0,0.02,0],carriage);
+add(BX(0.5,0.02,0.42),mInner,[0,-0.17,0],carriage);
+add(BX(0.6,0.05,0.5),std(0x2e3238),[0,0.22,0],carriage);
+const tubes=group([0,0,0],P);
+ORDER.forEach((c,i)=>{const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(2.22,1.12,-0.25+i*0.07),new THREE.Vector3(1.7,1.3,-0.75+i*0.05),new THREE.Vector3(0.8,1.28,-0.85+i*0.05),new THREE.Vector3(0.3,1.18,-0.45+i*0.04)]);
+  const t=new THREE.Mesh(new THREE.TubeGeometry(curve,40,0.02,8),std(INKHEX[c],{transparent:true,opacity:.85,roughness:.3}));t.castShadow=true;tubes.add(t);});
+const board=group([-1.4,0.55,-1.28],P);
+add(BX(1.2,0.7,0.03),std(0x1d6a43,{roughness:.5}),[0,0,0],board);
+[[-0.3,0.12,0.25,0.25],[0.2,-0.1,0.35,0.18],[0.3,0.2,0.15,0.15],[-0.25,-0.2,0.2,0.12]].forEach(([x,y,w,h])=>add(BX(w,h,0.04),std(0x15171a,{roughness:.4}),[x,y,0.03],board));
+// roller
+const roller=group([0,1.0,-1.2],P);
+const rollerMat=std(0x6c6862,{roughness:.95});
+[-0.7,0.7].forEach(x=>{const r=add(CY(0.11,0.11,0.9),rollerMat,[x,0,0],roller);r.rotation.z=Math.PI/2;r.userData.rubber=true;});
+const shaft=add(CY(0.025,0.025,3.4),mMetal,[0,0,0],roller);shaft.rotation.z=Math.PI/2;
+// paper sensor
+const sensor=group([-0.9,0.82,-0.75],P);
+add(BX(0.18,0.06,0.18),mInner,[0,0,0],sensor);
+add(BX(0.045,0.17,0.045),std(0xdcdad2,{roughness:.5}),[0,0.11,0],sensor);
+const dust=group([0,0,0],sensor);
+for(let i=0;i<9;i++)add(new THREE.SphereGeometry(0.018+Math.random()*0.014,8,6),std(0x9a958c,{roughness:1}),[(Math.random()-.5)*0.16,0.15+Math.random()*0.06,(Math.random()-.5)*0.12],dust);
+// gecko
+const gecko=group([-0.86,0.97,-0.72],P);gecko.rotation.y=0.7;
+const gm=std(0x9c9767,{roughness:.55});
+add(new THREE.CapsuleGeometry(0.055,0.24,4,12),gm,[0,0,0],gecko).rotation.z=Math.PI/2;
+add(new THREE.SphereGeometry(0.06,16,12),gm,[0.19,0.01,0],gecko).scale.set(1.3,.72,1);
+[0.035,-0.035].forEach(z=>add(new THREE.SphereGeometry(0.012,8,6),std(0x050505,{roughness:.2}),[0.225,0.035,z],gecko));
+const geckoTail=group([-0.17,0,0],gecko);
+add(CY(0.035,0.004,0.34,10),gm,[-0.17,0,0],geckoTail).rotation.z=Math.PI/2;
+[[0.08,0.08,0.5],[0.08,-0.08,-0.5],[-0.09,0.08,-0.5],[-0.09,-0.08,0.5]].forEach(([x,z,r])=>{const l=add(BX(0.03,0.02,0.12),gm,[x,-0.035,z],gecko);l.rotation.y=r;});
+// waste ink pad
+add(BX(1.62,0.05,1.02),mInner,[-1.15,0.15,0.75],P);
+const pad=add(RB(1.5,0.1,0.9,.03),std(0xe9e5dc,{roughness:1}),[-1.15,0.22,0.75],P);
+const cFelt=new THREE.Color(0xe9e5dc),cStain=new THREE.Color(0x2a1f30);
+// foreign objects in rear slot
+const scrap=group([0.5,1.12,-1.27],P);
+{const g=new THREE.IcosahedronGeometry(0.11,1);const p=g.attributes.position;for(let i=0;i<p.count;i++){p.setXYZ(i,p.getX(i)*(0.8+Math.random()*.5),p.getY(i)*(0.6+Math.random()*.5),p.getZ(i)*(0.8+Math.random()*.5));}g.computeVertexNormals();
+ add(g,std(0xf2f1ea,{roughness:.95,flatShading:true}),[0,0,0],scrap);
+ const clip=add(new THREE.TorusGeometry(0.07,0.008,6,24),mMetal,[0.18,-0.02,0.02],scrap);clip.scale.set(1.6,0.6,1);clip.rotation.x=1.2;}
+// scanner unit
+const scan=group([0,1.1,-1.15],P);
+add(RB(4.42,0.34,2.62,.1),mBody,[0,0.17,1.3],scan,true);
+add(RB(4.3,0.06,2.5,.03),mGloss,[0,0.36,1.3],scan,true);
+add(BX(1.2,0.02,0.04),mInner,[0,0.2,2.62],scan,true);
+// rear sheet feeder
+const feeder=group([0,1.1,-1.33],P);feeder.rotation.x=-0.32;
+add(RB(3.4,1.9,0.05,.02),mBody,[0,0.95,0],feeder);
+const stack=add(BX(2.1,1.7,0.08),std(0xf7f7f3,{roughness:.9}),[0.1,0.92,0.07],feeder);
+const edgeGuide=add(RB(0.08,0.5,0.16,.02),std(0x8b939b,{roughness:.4}),[-1.3,0.4,0.1],feeder);
+// output tray
+add(RB(2.4,0.03,1.7,.012),mBody,[0,0.70,2.25],P,false);
+add(BX(2.4,0.12,0.02),mBody,[0,0.76,3.09],P);
+// front buttons
+const btnPower=group([-1.75,0.93,1.455],P),btnPaper=group([-1.45,0.93,1.455],P),btnInk=group([-1.15,0.93,1.455],P);
+[btnPower,btnPaper,btnInk].forEach(b=>{const k=add(CY(0.07,0.07,0.04),std(0x30353b,{metalness:.5,roughness:.35}),[0,0,0.01],b);k.rotation.x=Math.PI/2;});
+const ledPow=new THREE.MeshBasicMaterial({color:0x1d2a22});
+const ring=new THREE.Mesh(new THREE.TorusGeometry(0.085,0.012,8,32),ledPow);ring.position.z=0.025;btnPower.add(ring);
+const ledPaper=new THREE.MeshBasicMaterial({color:0x2b241c}),ledInk=new THREE.MeshBasicMaterial({color:0x2b241c});
+[[ledPaper,-1.45],[ledInk,-1.15]].forEach(([m,x])=>{const s=new THREE.Mesh(new THREE.SphereGeometry(0.022,12,8),m);s.position.set(x,1.04,1.46);P.add(s);});
+{const c=document.createElement('canvas');c.width=384;c.height=64;const g=c.getContext('2d');g.strokeStyle=g.fillStyle='#aab2ba';g.lineWidth=5;
+ g.beginPath();g.arc(64,32,16,-1.1,4.25);g.stroke();g.beginPath();g.moveTo(64,10);g.lineTo(64,32);g.stroke();
+ g.strokeRect(178,14,28,36);g.beginPath();g.moveTo(186,26);g.lineTo(198,26);g.stroke();
+ g.beginPath();g.moveTo(320,12);g.quadraticCurveTo(338,36,320,52);g.quadraticCurveTo(302,36,320,12);g.fill();
+ const pl=new THREE.Mesh(new THREE.PlaneGeometry(0.75,0.125),new THREE.MeshBasicMaterial({map:canvasTex(c),transparent:true}));pl.position.set(-1.45,0.84,1.456);P.add(pl);}
+// power cord
+add(BX(0.36,0.24,0.04),mInner,[1.6,0.35,-1.46],P);
+const plug=group([1.6,0.35,-1.6],P);
+add(RB(0.3,0.2,0.22,.03),mRubber,[0,0,0],plug);
+{const cv=new THREE.CatmullRomCurve3([new THREE.Vector3(0,0,-0.1),new THREE.Vector3(0,-0.08,-0.5),new THREE.Vector3(0.1,-0.31,-0.95),new THREE.Vector3(0.3,-0.32,-1.8),new THREE.Vector3(0.6,-0.32,-3.6)]);
+ add(new THREE.TubeGeometry(cv,48,0.04,8),mRubber,[0,0,0],plug);}
+{const cv=new THREE.CatmullRomCurve3([new THREE.Vector3(0.9,0.45,-1.47),new THREE.Vector3(0.9,0.4,-1.9),new THREE.Vector3(0.6,0.03,-2.4),new THREE.Vector3(-1.5,0.03,-3.6)]);
+ add(new THREE.TubeGeometry(cv,48,0.03,8),std(0x6b7178),[0,0,0],P);}
+
+// ink tank unit
+const TK=group([2.6,0,0.55],P);
+const TX={K:-0.28,C:-0.093,M:0.093,Y:0.28};
+const tanksBody=group([0,0,0],TK);
+add(RB(0.84,0.12,1.62,.04),mTankH,[0,0.06,-0.05],tanksBody);
+add(RB(0.05,1.1,1.62,.02),mTankH,[0.4,0.66,-0.05],tanksBody);
+add(RB(0.84,1.1,0.06,.02),mTankH,[0,0.66,-0.83],tanksBody);
+const mClear=phys(0xffffff,{transparent:true,opacity:.25,roughness:.06,clearcoat:1,depthWrite:false});
+const inkMesh={};
+ORDER.forEach(c=>{
+  const sh=add(RB(0.165,1.0,1.42,.03),mClear,[TX[c],0.64,-0.05],tanksBody);sh.castShadow=false;
+  const ink=add(BX(0.13,1,1.34),std(INKHEX[c],{roughness:.22}),[TX[c],0.6,-0.05],tanksBody);ink.castShadow=false;inkMesh[c]=ink;
+  [0.26,0.98].forEach(y=>add(BX(0.14,0.008,0.006),std(0xffffff,{roughness:.4}),[TX[c],y,0.675],tanksBody));
+  add(BX(0.12,0.035,0.006),std(INKHEX[c]),[TX[c],1.08,0.675],tanksBody);
+});
+const caps={};
+ORDER.forEach(c=>{caps[c]=group([TX[c],1.15,-0.5],TK);add(CY(0.055,0.06,0.07),std(INKHEX[c],{roughness:.35}),[0,0,0],caps[c]);});
+const tankCover=group([0,1.17,-0.84],TK);
+add(RB(0.88,0.07,1.66,.03),mTankH.clone(),[0,0.035,0.8],tankCover);
+
+// printed sheet
+const PW=600,PH=848;
+const pageFull=document.createElement('canvas');pageFull.width=PW;pageFull.height=PH;
+const pageCv=document.createElement('canvas');pageCv.width=PW;pageCv.height=PH;
+const pg=pageCv.getContext('2d');
+const pageTex=canvasTex(pageCv);
+const sheet=add(new THREE.PlaneGeometry(2.1,2.97).rotateX(-Math.PI/2),std(0xffffff,{map:pageTex,roughness:.85}),[0,0.74,0],P);
+sheet.userData.noPick=true;sheet.visible=false;
+const Z0=1.45-2.97/2-0.05,Z1=1.45+2.97/2-0.4;
+
+/* ================= desk tools ================= */
+const tools={};
+tools.tweezers=group([4.0,0.03,3.2]);tools.tweezers.rotation.y=0.5;
+[-0.035,0.035].forEach((z,i)=>{const a=add(BX(0.95,0.025,0.05),mMetal,[0,0,z*(1+i*0.0)],tools.tweezers);a.rotation.y=(i?-1:1)*0.04;});
+tools.cloth=group([5.4,0,3.4]);tools.cloth.rotation.y=-0.25;
+add(RB(1.0,0.12,0.8,.05),std(0x5ea5d0,{roughness:1}),[0,0.06,0],tools.cloth);
+add(RB(0.6,0.06,0.5,.03),std(0x6fb3dc,{roughness:1}),[0.1,0.15,0.05],tools.cloth);
+tools.brush=group([4.3,0.06,4.3]);tools.brush.rotation.y=0.9;
+add(CY(0.05,0.045,1.0,16),std(0xb7834c,{roughness:.5}),[0,0,0],tools.brush).rotation.z=Math.PI/2;
+add(BX(0.3,0.14,0.16),std(0x2a2522,{roughness:1}),[0.62,0.02,0],tools.brush);
+ORDER.forEach((c,i)=>{const b=tools['bottle'+c]=group([4.4+i*0.62,0,0.5]);
+  add(CY(0.2,0.2,0.95),phys(0xffffff,{transparent:true,opacity:.35,roughness:.08,clearcoat:1,depthWrite:false}),[0,0.475,0],b).castShadow=true;
+  add(CY(0.18,0.18,0.72),std(INKHEX[c],{roughness:.25}),[0,0.38,0],b);
+  add(CY(0.205,0.205,0.28),std(0xf1f1ee,{roughness:.6}),[0,0.5,0],b);
+  add(CY(0.12,0.14,0.22),std(INKHEX[c],{roughness:.4}),[0,1.06,0],b);});
+Object.values(tools).forEach(t=>t.userData.baseY=t.position.y);
+
+/* laptop */
+const laptop=group([-5.6,0,1.6]);laptop.rotation.y=0.42;
+const mAlu=std(0xb6bcc2,{metalness:.7,roughness:.32});
+add(RB(2.8,0.1,1.9,.05),mAlu,[0,0.05,0],laptop);
+add(BX(2.4,0.01,0.92),std(0x24282c,{roughness:.7}),[0,0.105,0.15],laptop);
+add(BX(0.9,0.006,0.5),std(0x9da3a9,{metalness:.5,roughness:.3}),[0,0.103,0.68],laptop);
+const lid=group([0,0.1,-0.93],laptop);lid.rotation.x=-0.26;
+add(RB(2.8,1.8,0.06,.04),mAlu,[0,0.9,-0.03],lid);
+const SC=document.createElement('canvas');SC.width=1024;SC.height=640;
+const screenTex=canvasTex(SC);
+const screen=new THREE.Mesh(new THREE.PlaneGeometry(2.62,1.64),new THREE.MeshBasicMaterial({map:screenTex,toneMapped:false}));
+screen.position.set(0,0.92,0.004);lid.add(screen);
+
+/* ================= interactive registry ================= */
+const NAMES={'obj:btnPower':'ปุ่มเปิด/ปิด','obj:btnPaper':'ปุ่มกระดาษ','obj:btnInk':'ปุ่มหมึก (กดเพื่อล้างหัวพิมพ์)','obj:plug':'ปลั๊กไฟ','obj:scanner':'ชุดสแกนเนอร์',
+ 'obj:tankCover':'ฝาครอบแท็งก์หมึก','obj:capK':'จุกแท็งก์สีดำ (K)','obj:capC':'จุกแท็งก์สีฟ้า (C)','obj:capM':'จุกแท็งก์สีม่วงแดง (M)','obj:capY':'จุกแท็งก์สีเหลือง (Y)',
+ 'obj:tanks':'ชุดแท็งก์หมึก','obj:paperStack':'กระดาษในช่องป้อน','obj:edgeGuide':'แคร่กั้นกระดาษ','obj:scrap':'เศษกระดาษและลวดเย็บ','obj:roller':'ลูกยางดึงกระดาษ (Feed roller)',
+ 'obj:sensor':'เซ็นเซอร์ตรวจจับกระดาษ','obj:gecko':'จิ้งจก','obj:pad':'ผ้าซับหมึก (Waste ink pad)','screen':'โปรแกรมดูแลเครื่องพิมพ์',
+ 'pick:tweezers':'แหนบ','pick:cloth':'ผ้าชุบน้ำหมาด','pick:brush':'แปรงขนนุ่ม','pick:bottleK':'ขวดหมึกสีดำ (K)','pick:bottleC':'ขวดหมึกสีฟ้า (C)','pick:bottleM':'ขวดหมึกสีม่วงแดง (M)','pick:bottleY':'ขวดหมึกสีเหลือง (Y)'};
+const TOOLNAME={tweezers:'แหนบ',cloth:'ผ้าชุบน้ำหมาด',brush:'แปรงขนนุ่ม',bottleK:'ขวดหมึกสีดำ (K)',bottleC:'ขวดหมึกสีฟ้า (C)',bottleM:'ขวดหมึกสีม่วงแดง (M)',bottleY:'ขวดหมึกสีเหลือง (Y)'};
+const inter={};
+function reg(key,obj){obj.userData.key=key;inter[key]=obj;
+  obj.traverse(m=>{if(m.isMesh&&(m.material.isMeshStandardMaterial)){const o=m.material;m.material=o.clone();if(SHELL.includes(o))SHELL.push(m.material);m.userData.glow=true;}});}
+reg('obj:btnPower',btnPower);reg('obj:btnPaper',btnPaper);reg('obj:btnInk',btnInk);reg('obj:plug',plug);reg('obj:scanner',scan);reg('obj:tankCover',tankCover);
+ORDER.forEach(c=>reg('obj:cap'+c,caps[c]));reg('obj:tanks',tanksBody);reg('obj:paperStack',stack);reg('obj:edgeGuide',edgeGuide);reg('obj:scrap',scrap);
+reg('obj:roller',roller);reg('obj:sensor',sensor);reg('obj:gecko',gecko);reg('obj:pad',pad);
+Object.keys(tools).forEach(k=>reg('pick:'+k,tools[k]));
+screen.userData.key='screen';inter.screen=screen;
+const padMat=pad.material;
+scene.traverse(o=>{if(o.isMesh&&o.material&&o.material.isMeshStandardMaterial)o.material.envMapIntensity=o.material.metalness>0.5?1:0.3;});
+const accent=new THREE.Color();
+
+function applyTheme(){if(!renderer.xr.isPresenting)scene.background=new THREE.Color(css('--stage'));accent.set(css('--accent'));}
+applyTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme);
+new MutationObserver(applyTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+/* ================= sound ================= */
+let ac=null,soundOn=true;
+function audio(){if(!ac){try{ac=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(ac&&ac.state==='suspended')ac.resume();return soundOn?ac:null;}
+function env(a,g,t0,dur,peak){g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(peak,t0+0.05);g.gain.setValueAtTime(peak,t0+Math.max(0.06,dur-0.12));g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);}
+const sfx={
+  motor(d){const a=audio();if(!a)return;const t=a.currentTime,o=a.createOscillator(),l=a.createOscillator(),lg=a.createGain(),f=a.createBiquadFilter(),g=a.createGain();
+    o.type='sawtooth';o.frequency.value=92;l.frequency.value=7;lg.gain.value=18;l.connect(lg);lg.connect(o.frequency);f.type='lowpass';f.frequency.value=520;
+    o.connect(f);f.connect(g);g.connect(a.destination);env(a,g,t,d,0.06);o.start(t);l.start(t);o.stop(t+d+.05);l.stop(t+d+.05);},
+  click(){const a=audio();if(!a)return;const t=a.currentTime,o=a.createOscillator(),g=a.createGain();o.type='square';o.frequency.value=1600;o.connect(g);g.connect(a.destination);env(a,g,t,0.07,0.05);o.start(t);o.stop(t+0.1);},
+  tone(fr,t0,d,v){const a=audio();if(!a)return;const o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=fr;o.connect(g);g.connect(a.destination);env(a,g,a.currentTime+t0,d,v);o.start(a.currentTime+t0);o.stop(a.currentTime+t0+d+.05);},
+  ok(){this.tone(660,0,.18,.08);this.tone(990,.12,.22,.07);},
+  warn(){this.tone(300,0,.25,.09);},
+  hot(){this.tone(880,0,.14,.1);this.tone(880,.2,.14,.1);this.tone(880,.4,.14,.1);},
+  done(){[523,659,784,1046].forEach((f,i)=>this.tone(f,i*.12,.3,.07));}
+};
+
+/* ================= animation engine ================= */
+let anims=[];
+const ease=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+function anim(dur,upd,done){anims.push({t:0,dur:reduce?Math.min(dur,.3):dur,upd,done});}
+function tweenTo(obj,to,dur,done){const from={};for(const k in to)from[k]=obj[k];anim(dur,e=>{for(const k in to)obj[k]=from[k]+(to[k]-from[k])*e;},done);}
+function tick(dt){const fin=[];anims=anims.filter(a=>{a.t+=dt;const p=Math.min(1,a.t/a.dur);if(a.upd)a.upd(ease(p),p);if(p>=1){fin.push(a);return false;}return true;});fin.forEach(a=>a.done&&a.done());}
+function goView(name){const v=VIEWS[name];if(!v||renderer.xr.isPresenting)return;const p0=camera.position.clone(),t0=controls.target.clone(),p1=new THREE.Vector3(...v[1]),t1=new THREE.Vector3(...v[2]);
+  anim(1.0,e=>{camera.position.lerpVectors(p0,p1,e);controls.target.lerpVectors(t0,t1,e);});}
+
+/* ================= paper painters ================= */
+function rng(seed){let s=(seed>>>0)||1;return()=>{s^=s<<13;s>>>=0;s^=s>>17;s^=s<<5;s>>>=0;return s/4294967296;};}
+const INKCSS={K:'#1b1b1d',C:'#00a3d9',M:'#e0007a',Y:'#ffd400'};
+function paintNozzle(cv,miss){const g=cv.getContext('2d'),W=cv.width,H=cv.height,s=W/600;
+  g.fillStyle='#fff';g.fillRect(0,0,W,H);
+  g.fillStyle='#2a2a2a';g.font=`600 ${24*s}px "IBM Plex Sans Thai",sans-serif`;g.fillText('ตรวจหัวพิมพ์ · Nozzle Check',40*s,64*s);
+  ORDER.forEach((c,ci)=>{const r=rng(ci*977+11),x0=(44+ci*134)*s,y0=110*s;g.fillStyle=INKCSS[c];
+    for(let col=0;col<3;col++)for(let row=0;row<22;row++){if(r()<(miss[c]||0))continue;g.fillRect(x0+col*36*s+(row%4)*6*s,y0+row*14*s,22*s,3.2*s);}
+    g.fillStyle='#555';g.font=`600 ${18*s}px "IBM Plex Mono",monospace`;g.fillText(c,x0+40*s,y0+336*s);});
+  g.fillStyle='#777';g.font=`${15*s}px "IBM Plex Sans Thai",sans-serif`;
+  g.fillText('เส้นต้องต่อเนื่องครบทุกช่อง ถ้าขาดหรือหาย ให้ล้างหัวพิมพ์',40*s,500*s);}
+function paintPhoto(cv,o){const W=cv.width,H=cv.height,s=W/600;
+  const tmp=document.createElement('canvas');tmp.width=W;tmp.height=H;const g=tmp.getContext('2d');
+  g.fillStyle='#fff';g.fillRect(0,0,W,H);
+  const m=40*s,iw=W-2*m,ih=iw*0.72,iy=92*s;
+  g.fillStyle='#222';g.font=`600 ${24*s}px "IBM Plex Sans Thai",sans-serif`;g.fillText('หน้าทดสอบสี',m,62*s);
+  let gr=g.createLinearGradient(0,iy,0,iy+ih);gr.addColorStop(0,'#2b67c9');gr.addColorStop(.58,'#f0a36a');gr.addColorStop(1,'#f8d68a');g.fillStyle=gr;g.fillRect(m,iy,iw,ih);
+  g.fillStyle='#ffeaa6';g.beginPath();g.arc(m+iw*.7,iy+ih*.46,iw*.075,0,7);g.fill();
+  const mtn=(col,base,amp,seed)=>{const r=rng(seed);g.fillStyle=col;g.beginPath();g.moveTo(m,iy+ih);for(let x=0;x<=iw+1;x+=iw/12)g.lineTo(m+x,iy+ih*base-r()*ih*amp);g.lineTo(m+iw,iy+ih);g.closePath();g.fill();};
+  mtn('#6b5590',.62,.22,3);mtn('#3b6a4e',.76,.15,7);mtn('#2c8a3e',.9,.07,9);
+  const r=rng(21);for(let i=0;i<46;i++){g.fillStyle=['#e0007a','#ffd400','#ff4b2b','#ffffff'][i%4];g.beginPath();g.arc(m+r()*iw,iy+ih*(.9+r()*.08),3*s+r()*4*s,0,7);g.fill();}
+  const by=iy+ih+28*s,bw=iw/8;
+  ['#00a3d9','#e0007a','#ffd400','#1b1b1d','#e3241b','#00a650','#2b3990','#9b9b9b'].forEach((c,i)=>{g.fillStyle=c;g.fillRect(m+i*bw,by,bw-4*s,64*s);});
+  gr=g.createLinearGradient(m,0,m+iw,0);gr.addColorStop(0,'#000');gr.addColorStop(1,'#fff');g.fillStyle=gr;g.fillRect(m,by+80*s,iw,26*s);
+  g.fillStyle='#666';g.font=`${15*s}px "IBM Plex Sans Thai",sans-serif`;g.fillText('ฟ้า · ม่วงแดง · เหลือง · ดำ · แดง · เขียว · น้ำเงิน · เทา',m,by+136*s);
+  const miss=o.miss||{};
+  if(miss.C||miss.M||miss.Y){const d=g.getImageData(0,0,W,H),a=d.data,fc=miss.C||0,fm=miss.M||0,fy=miss.Y||0;
+    for(let i=0;i<a.length;i+=4){a[i]=255-(255-a[i])*(1-fc);a[i+1]=255-(255-a[i+1])*(1-fm);a[i+2]=255-(255-a[i+2])*(1-fy);}g.putImageData(d,0,0);}
+  if(o.band>0){const r2=rng(5);g.fillStyle='rgba(255,255,255,.9)';for(let y=iy;y<H;y+=5*s)if(r2()<o.band)g.fillRect(0,y,W,1.8*s);}
+  const G=cv.getContext('2d');G.fillStyle='#fff';G.fillRect(0,0,W,H);
+  if(o.skew){G.save();G.translate(W*0.1,-H*0.02);G.rotate(0.075);G.drawImage(tmp,0,0);G.restore();}else G.drawImage(tmp,0,0);}
+function paintLeds(cv,caption){const g=cv.getContext('2d'),W=cv.width,H=cv.height;
+  g.fillStyle='#fff';g.fillRect(0,0,W,H);
+  g.fillStyle='#1d2025';g.fillRect(20,120,W-40,120);
+  [['เปิด/ปิด','#3ccf6e',false],['กระดาษ','#ff9a2e',true],['หมึก','#ff9a2e',true]].forEach(([t,c,bl],i)=>{const x=70+i*80;
+    g.fillStyle=c;g.shadowColor=c;g.shadowBlur=bl?18:8;g.beginPath();g.arc(x,165,11,0,7);g.fill();g.shadowBlur=0;
+    g.fillStyle='#c8ced4';g.font='500 15px "IBM Plex Sans Thai",sans-serif';g.textAlign='center';g.fillText(t,x,215);});
+  g.textAlign='left';g.fillStyle='#ff9a2e';g.font='600 18px "IBM Plex Sans Thai",sans-serif';g.fillText('⇄ กะพริบสลับกัน',90,280);
+  g.fillStyle='#333';g.font='500 17px "IBM Plex Sans Thai",sans-serif';wrap(g,caption,W-40).forEach((l,i)=>g.fillText(l,20,320+i*24));}
+
+/* ================= text wrap ================= */
+const segr=(window.Intl&&Intl.Segmenter)?new Intl.Segmenter('th',{granularity:'word'}):null;
+function wrap(g,text,maxW){const parts=segr?[...segr.segment(text)].map(x=>x.segment):[...text];const lines=[];let line='';
+  for(const p of parts){const t=line+p;if(g.measureText(t).width>maxW&&line){lines.push(line);line=p.trimStart();}else line=t;}if(line)lines.push(line);return lines;}
+
+/* ================= cases ================= */
+let S,C,mode='practice',caseIdx=0;
+const H={
+  power(on,msg){return done=>{sfx.click();S.power=on;if(on){S.printing=true;sfx.motor(1.5);anim(1.5,(e,p)=>{carriage.position.x=1.6-Math.sin(p*Math.PI)*2.6;},()=>{carriage.position.x=1.6;S.printing=false;done(msg);});}else done(msg);};},
+  plug(on,msg){return done=>{sfx.click();tweenTo(plug.position,{z:on?-1.6:-2.15},.6,()=>{S.plugged=on;done(msg);});};},
+  lid(open,msg){return done=>tweenTo(scan.rotation,{x:open?-0.6:0},1,()=>{S.lidOpen=open;done(msg);});},
+  view(name,msg){return done=>{goView(name);anim(1,null,()=>done(msg));};},
+  print(kind,msg){return done=>printPage(kind,()=>done(msg));},
+  clean(target,msg,dur){return done=>{S.printing=true;const d=dur||2.8;sfx.motor(d);const x0=carriage.position.x;
+    anim(d,(e,p)=>{carriage.position.x=p<.2?x0+(1.78-x0)*(p/.2):1.78+Math.sin(p*70)*0.015;},()=>{carriage.position.x=1.6;Object.assign(S.miss,target);
+      S.padLevel=Math.min(1,S.padLevel+(dur?0.12:0.05));updatePad();if(dur)ORDER.forEach(c=>S.ink[c]=Math.max(0,S.ink[c]-0.04));updateInk();S.printing=false;done(msg);});};},
+  tankCover(open,msg){return done=>tweenTo(tankCover.rotation,{x:open?-1.25:0},.8,()=>{S.tankCoverOpen=open;done(msg);});},
+  cap(c,open,msg){return done=>{sfx.click();tweenTo(caps[c].position,{y:open?1.33:1.15},.45,()=>{S.caps[c]=open;done(msg);});};},
+  refill(c,msg){return done=>{const b=tools['bottle'+c];b.userData.anim=true;const home={x:b.position.x,y:b.position.y,z:b.position.z};
+    const tx=TK.position.x+TX[c],tz=TK.position.z+caps[c].position.z;
+    tweenTo(b.position,{x:tx,y:2.55,z:tz},.9,()=>tweenTo(b.rotation,{z:Math.PI},.5,()=>{const f=S.ink[c];
+      anim(1.8,e=>{S.ink[c]=f+(0.93-f)*e;updateInk();},()=>tweenTo(b.rotation,{z:0},.5,()=>tweenTo(b.position,home,.9,()=>{b.userData.anim=false;S.tool=null;renderTools();done(msg);})));}));};},
+  stack(inside,msg){return done=>tweenTo(stack.position,{y:inside?0.92:2.25},.7,()=>{S.paperIn=inside;done(msg);});},
+  guide(msg){return done=>tweenTo(edgeGuide.position,{x:-1.0},.5,()=>{S.guideOk=true;done(msg);});},
+  remove(obj,flag,msg){return done=>tweenTo(obj.position,{y:obj.position.y+0.9},.8,()=>{obj.visible=false;S[flag]=false;done(msg);});},
+  dust(msg){return done=>anim(.9,e=>dust.scale.setScalar(Math.max(0.001,1-e)),()=>{dust.visible=false;dust.scale.setScalar(1);S.dust=false;done(msg);});},
+  roller(msg){return done=>{const a=new THREE.Color(0x6c6862),b=new THREE.Color(0x111214);anim(1.3,e=>setRoller(a.clone().lerp(b,e)),()=>{S.rollerDirty=false;done(msg);});};},
+  padOut(msg){return done=>tweenTo(pad.position,{z:3.4,y:0.06},1.1,()=>{S.padOut=true;done(msg);});},
+  padIn(msg){return done=>{const a=padMat.color.clone();anim(.5,e=>padMat.color.copy(a).lerp(cFelt,e),()=>tweenTo(pad.position,{z:0.75,y:0.22},1.1,()=>{S.padOut=false;S.padNew=true;S.padLevel=0;done(msg);}));};},
+  status(msg){return done=>{showStatus();anim(.9,null,()=>done(msg));};},
+  reset(msg){return done=>{S.resetting=true;drawScreen();anim(2.2,null,()=>{S.resetting=false;S.counterFull=false;S.padLevel=0;done(msg);});};}
+};
+const PWR_OFF={a:'obj:btnPower',title:'ปิดเครื่อง',how:'กดปุ่มเปิด/ปิดที่หน้าเครื่องด้านซ้าย รอให้หัวพิมพ์กลับเข้าที่',run:H.power(false,'ปิดเครื่องแล้ว หัวพิมพ์กลับเข้าที่จอดเรียบร้อย')};
+const UNPLUG={a:'obj:plug',title:'ถอดปลั๊กไฟ',how:'ปลั๊กอยู่ด้านหลังขวา กดปุ่ม “ด้านหลัง” ใต้ฉากเพื่อหมุนไปดู',run:H.plug(false,'ถอดปลั๊กแล้ว ไม่มีไฟเลี้ยงในเครื่อง')};
+const PLUGIN={a:'obj:plug',title:'เสียบปลั๊กไฟ',how:'คลิกปลั๊กด้านหลังเพื่อเสียบกลับ',run:H.plug(true,'เสียบปลั๊กแล้ว')};
+const TEST=(msg)=>({a:'tool:test',title:'พิมพ์งานทดสอบ',how:'กด “พิมพ์งานทดสอบ” บนโน้ตบุ๊ก แล้วดูแผ่นที่ออกมา',run:H.print('photo',msg)});
+
+const CNAME={K:'ดำ',C:'ฟ้า',M:'ม่วงแดง',Y:'เหลือง'};
+const CPOS={K:'ช่องแรกจากซ้าย',C:'ช่องที่สองจากซ้าย',M:'ช่องที่สามจากซ้าย',Y:'ช่องขวาสุด'};
+const CSYM={C:'ภาพออกโทนแดงส้ม ท้องฟ้าไม่เป็นสีฟ้า',M:'ภาพออกโทนเขียวอมฟ้า สีแดงและชมพูหายไป',Y:'ภาพออกโทนม่วงอมน้ำเงิน สีเหลืองและเขียวสดหายไป'};
+const CASE_META=[
+ {id:'lines',title:'หมึกไม่ออก / พิมพ์เป็นเส้น',short:'งานพิมพ์มีเส้นขาวคาดเป็นช่วง',cause:'หัวพิมพ์ตันหรือมีฟองอากาศในสายหมึก จากการไม่ได้ใช้งานนาน'},
+ {id:'color',title:'สีเพี้ยน / ไม่ครบสี',short:'ภาพสีผิดเพี้ยน มีสีหายไปหนึ่งสี',cause:'หมึกบางสีต่ำกว่าเส้นล่าง อากาศจึงเข้าไปในสายหมึกสีนั้น'},
+ {id:'feed',title:'ไม่ดึงกระดาษ / ดึงเอียง',short:'ดึงกระดาษเปล่า หรือดึงแล้วภาพเอียง',cause:'ลูกยางดึงกระดาษสกปรกหรือสึก และมีเศษสิ่งของในช่องป้อนกระดาษ'},
+ {id:'sensor',title:'ไฟกะพริบสลับ / ฟ้องกระดาษติด',short:'แจ้งกระดาษติดทั้งที่ไม่มีกระดาษ',cause:'เซ็นเซอร์ตรวจจับกระดาษถูกบังหรือสกปรก'},
+ {id:'pad',title:'ผ้าซับหมึกเต็ม',short:'เครื่องหยุดทำงาน ไฟกะพริบเตือน',cause:'ตัวนับผ้าซับหมึกเต็ม ต้องเปลี่ยนผ้าซับหมึกและรีเซ็ตตัวนับ'}];
+const MYS_SYM='ผู้ใช้แจ้งสั้น ๆ ว่า “เครื่องพิมพ์ใช้งานไม่ได้ตามปกติ” ไม่มีตัวอย่างงานมาให้ ต้องหาหลักฐานเองจากไฟหน้าเครื่อง สถานะเครื่องบนโน้ตบุ๊ก ระดับหมึก และการพิมพ์ทดสอบ';
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function randParams(id){const r=Math.random,f=x=>Math.round(x*100)/100;
+  if(id==='lines')return{miss:{K:f(.32+r()*.2),C:f(.15+r()*.25),M:r()<.5?0:f(.1+r()*.2),Y:f(r()*.25)}};
+  if(id==='color')return{color:['C','M','Y'][Math.floor(r()*3)]};
+  return{};}
+function buildCase(id,p){
+ const meta=CASE_META.find(m=>m.id===id);
+ if(id==='lines'){const miss=p.miss,bad=ORDER.filter(c=>miss[c]>0).map(c=>CNAME[c]).join(' ');
+  return{...meta,sym:'ผู้ใช้แจ้งว่าเอกสารมีเส้นขาวคาดเป็นช่วง ๆ และสีจาง หลังไม่ได้ใช้เครื่องมาราวสามสัปดาห์ ไฟสถานะปกติ',
+   init(s){s.miss=Object.assign({},miss);},thumb:cv=>paintPhoto(cv,{band:.35,miss:{C:miss.C*.3}}),
+   quiz:{q:'จากอาการนี้ สาเหตุที่เป็นไปได้มากที่สุดคืออะไร',opts:[meta.cause,'ลูกยางดึงกระดาษสึก ทำให้กระดาษเลื่อนไม่สม่ำเสมอ','ผ้าซับหมึกเต็ม เครื่องจึงลดปริมาณหมึกลง'],ans:0,
+     why:'หมึกที่ค้างในหัวพิมพ์แห้งเกาะ ทำให้บางหัวฉีดไม่ออกจนเป็นเส้นขาว',hint:'อาการเริ่มหลังไม่ได้ใช้เครื่องนาน'},
+   steps:[
+    {a:'tool:nozzle',title:'พิมพ์ตรวจหัวพิมพ์',how:'กด “ตรวจหัวพิมพ์” บนโน้ตบุ๊ก แล้วดูแผ่นที่ออกมาบนถาดหน้าเครื่อง',run:H.print('nozzle',`เส้นสี${bad}ขาดหลายจุด หัวพิมพ์ตันบางส่วน`)},
+    {a:'obj:tanks',title:'ตรวจระดับหมึกในแท็งก์',how:'คลิกชุดแท็งก์หมึกด้านขวาของเครื่อง หมึกต้องอยู่ระหว่างเส้นบนกับเส้นล่าง',run:H.view('tanks','หมึกทุกสีอยู่เหนือเส้นล่าง ปัญหาจึงไม่ได้มาจากหมึกหมด')},
+    {a:'tool:clean',title:'ล้างหัวพิมพ์ ครั้งที่ 1',how:'กด “ล้างหัวพิมพ์” บนโน้ตบุ๊ก หรือกดปุ่มรูปหยดหมึกบนเครื่อง',run:H.clean({K:.14,C:0,M:0,Y:0},'ล้างเสร็จแล้ว พิมพ์ตรวจซ้ำเพื่อดูผล')},
+    {a:'tool:nozzle',title:'พิมพ์ตรวจหัวพิมพ์ซ้ำ',how:'สั่งตรวจหัวพิมพ์อีกครั้ง แล้วเทียบกับแผ่นแรก',run:H.print('nozzle','ดีขึ้นมาก แต่สีดำยังขาดบางเส้น ต้องล้างอีกรอบ')},
+    {a:'tool:clean',title:'ล้างหัวพิมพ์ ครั้งที่ 2',how:'ล้างหัวพิมพ์อีกหนึ่งรอบ',run:H.clean({K:0},'ล้างรอบที่สองเสร็จแล้ว')},
+    {a:'tool:nozzle',title:'ยืนยันผลด้วยการตรวจหัวพิมพ์',how:'เส้นควรต่อเนื่องครบทุกสี',run:H.print('nozzle','เส้นครบทุกสี หัวพิมพ์กลับมาปกติ')},
+    TEST('งานพิมพ์ไม่มีเส้นคาดแล้ว ส่งคืนผู้ใช้ได้')],
+   why(a){if(a==='tool:flush')return['warn','การไล่หมึกแรงสูงใช้หมึกมากและทำให้ผ้าซับหมึกเต็มเร็ว ใช้เมื่อล้างหัวพิมพ์ปกติสามครั้งแล้วยังไม่หาย'];
+    if(a==='tool:clean'&&cur().a==='tool:nozzle'&&S.cur>0)return['warn','ตรวจหัวพิมพ์ก่อนล้างซ้ำ การล้างติดกันหลายรอบเปลืองหมึกและทำให้ผ้าซับหมึกเต็มเร็ว'];return null;},
+   tip:'ถ้าล้างสามรอบแล้วยังขาด ให้ปิดเครื่องพักไว้อย่างน้อย 6 ชั่วโมงแล้วลองใหม่ และควรพิมพ์งานสีสัปดาห์ละครั้งกันหมึกแห้ง'};}
+ if(id==='color'){const c=p.color,nm=`สี${CNAME[c]} (${c})`;
+  return{...meta,sym:`รูปถ่ายที่พิมพ์ออกมา${CSYM[c]} ผู้ใช้ไม่ได้ดูระดับหมึกมานาน`,
+   init(s){s.ink[c]=.06;s.miss[c]=1;},thumb:cv=>paintPhoto(cv,{miss:{[c]:1}}),
+   quiz:{q:'สีที่หายไปบอกอะไรเราได้บ้าง สาเหตุที่น่าจะเป็นคืออะไร',opts:[`หมึก${nm}ต่ำกว่าเส้นล่าง อากาศจึงเข้าไปในสายหมึกสีนั้น`,'เซ็นเซอร์ตรวจจับกระดาษสกปรก','ตั้งค่าชนิดกระดาษในไดรเวอร์ไม่ตรงกับกระดาษจริง'],ans:0,
+     why:'เมื่อหมึกต่ำกว่าเส้นล่าง เครื่องดูดอากาศเข้าสายหมึก หัวฉีดสีนั้นจึงไม่มีหมึกออก',hint:'หายไปแค่สีเดียว'},
+   steps:[
+    {a:'obj:tanks',title:'ตรวจระดับหมึกในแท็งก์',how:'คลิกชุดแท็งก์หมึกด้านขวา ดูว่าสีใดต่ำกว่าเส้นล่าง',run:H.view('tanks',`หมึก${nm}ต่ำกว่าเส้นล่าง ต้องเติมก่อน`)},
+    {a:'obj:tankCover',title:'เปิดฝาครอบแท็งก์',how:'คลิกฝาด้านบนของชุดแท็งก์เพื่อยกขึ้น',run:H.tankCover(true,'เปิดฝาครอบแล้ว มองเห็นจุกของแต่ละสี')},
+    {a:'obj:cap'+c,title:`เปิดจุกแท็งก์${nm}`,how:`คลิกจุก${nm} ${CPOS[c]}`,run:H.cap(c,true,'เปิดจุกแล้ว')},
+    {a:'obj:cap'+c,tool:'bottle'+c,title:`เติมหมึก${nm}ถึงเส้นบน`,how:`หยิบขวดหมึก${nm}บนโต๊ะ แล้วคลิกจุกที่เปิดไว้`,toolMsg:`ต้องหยิบขวดหมึก${nm}ก่อน`,run:H.refill(c,'เติมหมึกถึงเส้นบนแล้ว')},
+    {a:'obj:cap'+c,title:'ปิดจุกให้แน่น',how:'คลิกจุกอีกครั้งเพื่อปิด',run:H.cap(c,false,'ปิดจุกแล้ว')},
+    {a:'obj:tankCover',title:'ปิดฝาครอบแท็งก์',how:'คลิกฝาครอบเพื่อปิดลง',run:H.tankCover(false,'ปิดฝาครอบเรียบร้อย')},
+    {a:'tool:flush',title:'ไล่ฟองอากาศด้วยการไล่หมึกแรงสูง',how:'กด “ไล่หมึกแรงสูง” บนโน้ตบุ๊ก ให้หมึกใหม่เข้าสายแทนอากาศ',run:H.clean({[c]:0},`ไล่ฟองอากาศเสร็จ หมึก${nm}ไหลถึงหัวพิมพ์แล้ว`,4)},
+    {a:'tool:nozzle',title:'พิมพ์ตรวจหัวพิมพ์',how:`ดูว่าเส้น${nm}กลับมาครบ`,run:H.print('nozzle','เส้นครบทั้งสี่สีแล้ว')},
+    TEST('สีกลับมาครบ ภาพไม่ผิดเพี้ยนแล้ว')],
+   why(a){if(a==='tool:flush'&&S.ink[c]<.5)return['warn','ต้องเติมหมึกให้ถึงเส้นบนก่อน ถ้าไล่หมึกตอนหมึกยังต่ำ เครื่องจะดูดอากาศเข้าสายเพิ่ม'];
+    if(a==='tool:clean')return['warn','การล้างหัวพิมพ์ปกติไล่อากาศในสายหมึกได้ไม่หมด กรณีหมึกเคยต่ำกว่าเส้นล่าง ให้ใช้การไล่หมึกแรงสูงหลังเติมหมึก'];return null;},
+   tip:'เติมหมึกก่อนระดับลดลงถึงเส้นล่าง ใช้หมึกตรงรุ่น และเปิดจุกทีละสีเพื่อกันเติมผิดแท็งก์'};}
+ if(id==='feed')return{...meta,sym:'สั่งพิมพ์แล้วลูกยางหมุนแต่ไม่ดึงกระดาษ บางครั้งดึงเข้าไปได้แต่ภาพเอียง ไฟกระดาษกะพริบ',
+   init(s){s.scrap=true;s.rollerDirty=true;s.guideOk=false;},thumb:cv=>paintPhoto(cv,{skew:true}),
+   quiz:{q:'ปัญหาน่าจะอยู่ที่ชิ้นส่วนใด',opts:[meta.cause,'หัวพิมพ์ตัน','หมึกสีดำหมด'],ans:0,
+     why:'ฝุ่นกระดาษที่เกาะลูกยางทำให้ลื่น ดึงกระดาษไม่ติด ส่วนเศษกระดาษหรือลวดเย็บทำให้กระดาษเข้าเอียง',hint:'ปัญหาอยู่ที่การเคลื่อนของกระดาษ ไม่ใช่หมึก'},
+   steps:[
+    {a:'obj:paperStack',title:'นำกระดาษออกจากช่องป้อนด้านหลัง',how:'คลิกปึกกระดาษบนแผ่นรองด้านหลังเครื่อง',run:H.stack(false,'ดึงปึกกระดาษออกแล้ว')},
+    PWR_OFF,
+    {a:'obj:scrap',tool:'tweezers',title:'คีบเศษกระดาษและลวดเย็บออก',how:'หยิบแหนบ กด “ด้านหลัง” แล้วคลิกเศษกระดาษในช่องป้อน',toolMsg:'ใช้แหนบคีบ อย่าใช้นิ้วล้วง เศษอาจถูกดันลึกเข้าไปอีก',run:H.remove(scrap,'scrap','เอาเศษกระดาษและลวดเย็บออกแล้ว')},
+    {a:'obj:roller',tool:'cloth',title:'เช็ดลูกยางดึงกระดาษ',how:'หยิบผ้าชุบน้ำหมาด แล้วคลิกลูกยางใต้ช่องป้อน เปิดเอกซเรย์จะเห็นชัดขึ้น',toolMsg:'ใช้ผ้าชุบน้ำหมาดเช็ดลูกยาง ห้ามใช้ทินเนอร์หรือแอลกอฮอล์เข้มข้น',run:H.roller('เช็ดฝุ่นกระดาษออกแล้ว ผิวยางกลับมาฝืดพอดึงกระดาษได้')},
+    {a:'obj:btnPower',title:'เปิดเครื่อง',how:'กดปุ่มเปิด/ปิดอีกครั้ง',run:H.power(true,'เปิดเครื่องแล้ว')},
+    {a:'obj:paperStack',title:'เคาะกระดาษให้เรียบแล้วใส่กลับ',how:'คลิกปึกกระดาษเพื่อใส่กลับ ไม่ให้เกินขีดบนของแคร่',run:H.stack(true,'ใส่กระดาษกลับแล้ว')},
+    {a:'obj:edgeGuide',title:'เลื่อนแคร่กั้นกระดาษให้ชิดขอบ',how:'คลิกแคร่สีเทาด้านซ้ายของปึกกระดาษ',run:H.guide('แคร่ชิดขอบกระดาษพอดี กระดาษจะเข้าตรง')},
+    TEST('กระดาษเข้าตรง ภาพไม่เอียงแล้ว')],
+   why(){return null;},
+   tip:'ถ้าเช็ดแล้วลูกยางยังลื่นหรือผิวเรียบจนเงา ควรเปลี่ยนลูกยางใหม่ ใช้กระดาษแห้งไม่ยับ และไม่ใส่เกินขีดบนของแคร่'};
+ if(id==='sensor')return{...meta,sym:'ไฟกระดาษกับไฟหมึกกะพริบสลับกัน เครื่องแจ้งกระดาษติด แต่ดูช่องป้อนและช่องออกแล้วไม่พบกระดาษ',
+   init(s){s.gecko=true;s.dust=true;},thumb:cv=>paintLeds(cv,'แจ้งกระดาษติด แต่ไม่พบกระดาษในเครื่อง'),
+   quiz:{q:'ทำไมเครื่องจึงแจ้งกระดาษติดทั้งที่ไม่มีกระดาษ',opts:['เซ็นเซอร์ตรวจจับกระดาษถูกบังหรือสกปรก เช่น มีฝุ่นหรือสัตว์เล็กเข้าไป','หมึกสีดำหมด','สาย USB หลวม'],ans:0,
+     why:'เซ็นเซอร์ที่ถูกบังจะรายงานว่ามีกระดาษค้างอยู่ตลอด เครื่องจึงฟ้องกระดาษติด',hint:'เครื่อง “คิดว่า” มีกระดาษอยู่ข้างใน'},
+   steps:[PWR_OFF,UNPLUG,
+    {a:'obj:scanner',title:'ยกชุดสแกนเนอร์ขึ้น',how:'คลิกชุดสแกนเนอร์ด้านบนเพื่อยกขึ้นดูภายใน',run:H.lid(true,'ยกชุดสแกนเนอร์แล้ว พบจิ้งจกนอนทับเซ็นเซอร์กระดาษ')},
+    {a:'obj:gecko',tool:'tweezers',title:'นำจิ้งจกออก',how:'หยิบแหนบ แล้วคลิกจิ้งจกที่อยู่ใกล้เซ็นเซอร์',toolMsg:'ใช้แหนบหรือสวมถุงมือ ไม่ให้สิ่งสกปรกเลอะชิ้นส่วนภายใน',run:H.remove(gecko,'gecko','นำจิ้งจกออกแล้ว')},
+    {a:'obj:sensor',tool:'brush',title:'ปัดฝุ่นที่เซ็นเซอร์',how:'หยิบแปรงขนนุ่ม แล้วคลิกก้านเซ็นเซอร์สีขาว',toolMsg:'ใช้แปรงขนนุ่มปัดเบา ๆ ห้ามใช้ผ้าเปียก',run:H.dust('เซ็นเซอร์สะอาดและขยับได้อิสระ')},
+    {a:'obj:scanner',title:'ปิดชุดสแกนเนอร์',how:'คลิกชุดสแกนเนอร์เพื่อปิดลง',run:H.lid(false,'ปิดชุดสแกนเนอร์แล้ว')},
+    PLUGIN,
+    {a:'obj:btnPower',title:'เปิดเครื่องแล้วดูไฟสถานะ',how:'กดปุ่มเปิด/ปิด ไฟที่กะพริบสลับควรหายไป',run:H.power(true,'ไฟสถานะปกติแล้ว ไม่ฟ้องกระดาษติด')},
+    TEST('พิมพ์ได้ตามปกติ')],
+   why(){return null;},
+   tip:'ตั้งเครื่องให้ห่างหลอดไฟที่ล่อแมลง คลุมเครื่องเมื่อไม่ใช้งาน และปัดฝุ่นช่องป้อนกระดาษเป็นประจำ'};
+ return{...meta,sym:'เครื่องใช้งานมาหลายปี วันนี้ไฟกะพริบสลับและหยุดพิมพ์ คอมพิวเตอร์แจ้งว่าต้องเข้ารับบริการ',
+   init(s){s.padLevel=1;s.counterFull=true;},thumb:cv=>paintLeds(cv,'เครื่องหยุดพิมพ์ คอมพิวเตอร์แจ้งให้เข้ารับบริการ'),
+   quiz:{q:'สาเหตุที่ทำให้เครื่องหยุดทำงานคืออะไร',opts:[meta.cause,'มีกระดาษติดในเครื่อง','หัวพิมพ์ตัน'],ans:0,
+     why:'ทุกครั้งที่ล้างหัวพิมพ์ หมึกเสียจะไหลลงผ้าซับหมึก เมื่อตัวนับถึงขีดจำกัด เครื่องจะหยุดเพื่อกันหมึกล้น',hint:'เครื่องใช้มาหลายปี และแจ้งให้เข้ารับบริการ'},
+   steps:[
+    {a:'tool:status',title:'เปิดสถานะเครื่อง อ่านข้อความเตือน',how:'กด “สถานะเครื่อง” บนโน้ตบุ๊ก',run:H.status('เครื่องแจ้งว่าผ้าซับหมึกหมดอายุ ตัวนับเต็ม 100%')},
+    PWR_OFF,UNPLUG,
+    {a:'obj:pad',title:'ถอดผ้าซับหมึกเก่าออก',how:'เปิด “เอกซเรย์” ที่มุมขวาบน แล้วคลิกผ้าซับหมึกที่ฐานด้านหน้าซ้าย',run:H.padOut('ผ้าซับหมึกเก่าชุ่มหมึกทั้งแผ่น ใส่ถุงปิดให้มิดก่อนทิ้ง')},
+    {a:'obj:pad',title:'ใส่ผ้าซับหมึกใหม่',how:'คลิกผ้าซับหมึกบนโต๊ะ เพื่อใส่แผ่นใหม่เข้าที่เดิม',run:H.padIn('ใส่ผ้าซับหมึกใหม่แล้ว')},
+    PLUGIN,
+    {a:'obj:btnPower',title:'เปิดเครื่อง',how:'กดปุ่มเปิด/ปิด',run:H.power(true,'เปิดเครื่องแล้ว ไฟยังกะพริบเพราะยังไม่ได้รีเซ็ตตัวนับ')},
+    {a:'tool:reset',title:'รีเซ็ตตัวนับผ้าซับหมึก',how:'กด “รีเซ็ตตัวนับซับหมึก” บนโน้ตบุ๊ก',run:H.reset('ตัวนับกลับเป็น 0% ไฟสถานะกลับมาปกติ')},
+    TEST('เครื่องกลับมาพิมพ์ได้ตามปกติ')],
+   why(a){if(a==='tool:reset'&&!S.padNew)return['hot','รีเซ็ตตัวนับโดยไม่เปลี่ยนผ้าซับหมึก หมึกเสียจะล้นออกใต้เครื่องและอาจไหลลงแผงวงจร'];return null;},
+   tip:'รีเซ็ตตัวนับทุกครั้งต้องคู่กับการเปลี่ยนผ้าซับหมึก หรือต่อถังรองหมึกเสียภายนอก งานนี้ต้องใช้โปรแกรมบริการของผู้ผลิต ควรให้ช่างหรือศูนย์บริการทำ'};
+}
+function mysterize(c,order){const causes=CASE_META.map(m=>m.cause);const ans=order.indexOf(CASE_META.findIndex(m=>m.id===c.id));
+  c.quiz={q:'จากไฟหน้าเครื่อง สถานะเครื่อง และงานพิมพ์ที่เห็น สาเหตุของปัญหาคืออะไร',opts:order.map(i=>causes[i]),ans,why:c.quiz.why,
+    hint:'เปิดสถานะเครื่อง ดูไฟหน้าเครื่อง ตรวจระดับหมึก หรือสั่งพิมพ์ตรวจหัวพิมพ์เพื่อหาหลักฐานก่อนตอบ'};}
+const UTIL=[{a:'tool:nozzle',t:'ตรวจหัวพิมพ์',s:'Nozzle Check'},{a:'tool:clean',t:'ล้างหัวพิมพ์',s:'Head Cleaning'},{a:'tool:flush',t:'ไล่หมึกแรงสูง',s:'Power Ink Flushing'},
+  {a:'tool:status',t:'สถานะเครื่อง',s:'Status Monitor'},{a:'tool:reset',t:'รีเซ็ตตัวนับซับหมึก',s:'Waste Ink Counter'},{a:'tool:test',t:'พิมพ์งานทดสอบ',s:'Test Print'}];
+const cur=()=>C.steps[Math.min(S.cur,C.steps.length-1)];
+
+function fresh(){return{power:true,plugged:true,lidOpen:false,tankCoverOpen:false,caps:{K:false,C:false,M:false,Y:false},ink:{K:.78,C:.7,M:.66,Y:.72},miss:{K:0,C:0,M:0,Y:0},
+  scrap:false,rollerDirty:false,guideOk:true,paperIn:true,gecko:false,dust:false,padLevel:.25,padOut:false,padNew:false,counterFull:false,
+  tool:null,phase:'quiz',cur:0,log:[],mistakes:[],quizTries:0,mystery:false,busy:false,done:false,start:null,elapsed:0,score:100,wrong:0,hazard:0,screen:'quiz',lastMsg:'',printing:false,resetting:false};}
+const feedFault=()=>S.scrap||S.rollerDirty||!S.guideOk;
+const sensorFault=()=>S.gecko||S.dust;
+
+/* ================= physical state ================= */
+function setRoller(col){roller.traverse(m=>{if(m.userData.rubber)m.material.color.copy(col);});}
+function updateInk(){ORDER.forEach(c=>{const h=Math.max(0.01,S.ink[c]*0.9);inkMesh[c].scale.y=h;inkMesh[c].position.y=0.16+h/2;});}
+function updatePad(){padMat.color.copy(cFelt).lerp(cStain,Math.min(1,S.padLevel));}
+function applyPhysical(){
+  plug.position.z=S.plugged?-1.6:-2.15;scan.rotation.x=S.lidOpen?-0.6:0;tankCover.rotation.x=0;
+  ORDER.forEach(c=>{caps[c].position.y=1.15;});updateInk();
+  scrap.visible=S.scrap;scrap.position.y=1.12;gecko.visible=S.gecko;gecko.position.y=0.97;dust.visible=S.dust;dust.scale.setScalar(1);
+  setRoller(new THREE.Color(S.rollerDirty?0x6c6862:0x111214));
+  edgeGuide.position.x=S.guideOk?-1.0:-1.3;stack.position.y=0.92;
+  pad.position.set(-1.15,0.22,0.75);updatePad();carriage.position.x=1.6;sheet.visible=false;
+  Object.values(tools).forEach(t=>{t.userData.anim=false;t.position.y=t.userData.baseY;t.rotation.z=0;});
+  ORDER.forEach((c,i)=>tools['bottle'+c].position.set(4.4+i*0.62,0,0.5));
+}
+
+/* ================= printing ================= */
+function printPage(kind,done){S.printing=true;
+  if(kind==='nozzle')paintNozzle(pageFull,S.miss);
+  else{const b=Math.max(S.miss.K,S.miss.C,S.miss.Y);paintPhoto(pageFull,{miss:S.miss,band:b>0?b*0.7:0,skew:feedFault()});}
+  sheet.visible=true;sheet.position.z=Z0;pg.fillStyle='#fff';pg.fillRect(0,0,PW,PH);pageTex.needsUpdate=true;
+  const d=3.4;sfx.motor(d);
+  anim(d,(e,p)=>{sheet.position.z=Z0+(Z1-Z0)*p;const h=Math.floor(PH*p);if(h>0)pg.drawImage(pageFull,0,PH-h,PW,h,0,PH-h,PW,h);pageTex.needsUpdate=true;
+    carriage.position.x=Math.sin(p*44)*1.5;},()=>{carriage.position.x=1.6;S.printing=false;done();});
+  if(!renderer.xr.isPresenting)goView('front');}
+
+/* ================= feedback ================= */
+const LABELS={ok:'ถูกต้อง',warn:'ยังไม่ใช่',hot:'อันตราย',info:'ข้อมูล'};
+function say(kind,text){S.lastMsg=text;S.lastKind=kind;
+  const t=$('msgTag');t.className='tag '+kind;t.textContent=LABELS[kind];$('msgText').textContent=text;
+  const tt=$('toastTag');tt.className='tag '+kind;tt.textContent=LABELS[kind];$('toastText').textContent=text;
+  $('toast').hidden=false;clearTimeout(say.t);say.t=setTimeout(()=>$('toast').hidden=true,4200);
+  $('xrMsg').textContent=text;drawScreen();speak((kind==='hot'?'ระวัง อันตราย ':'')+text,true);}
+function penalize(kind,text){S.mistakes.push({kind,step:S.phase==='quiz'?'วินิจฉัย':String(S.cur+1),msg:text});if(kind==='hot'){S.hazard++;S.score=Math.max(0,S.score-20);sfx.hot();}else{S.wrong++;S.score=Math.max(0,S.score-10);sfx.warn();}say(kind,text);renderGauges();}
+function advance(msg){S.cur++;S.busy=false;sfx.ok();say('ok',msg);if(S.cur>=C.steps.length)finish();else speakNext();renderAll();}
+function levelsText(){return 'ระดับหมึก '+ORDER.map(c=>`${c} ${Math.round(S.ink[c]*100)}%${S.ink[c]<0.12?' (ต่ำกว่าเส้นล่าง)':''}`).join(' · ');}
+function statusText(){if(!S.power||!S.plugged)return['ไม่พบเครื่องพิมพ์','เครื่องปิดอยู่หรือไม่ได้ต่อไฟ'];
+  if(S.counterFull)return['ต้องเข้ารับบริการ','ผ้าซับหมึกภายในเครื่องหมดอายุการใช้งาน · ตัวนับ 100%'];
+  if(sensorFault())return['กระดาษติด','นำกระดาษที่ติดออก แล้วกดปุ่มกระดาษ'];
+  if(feedFault())return['ป้อนกระดาษไม่ได้','ใส่กระดาษใหม่ให้ถูกต้อง แล้วกดปุ่มกระดาษ'];
+  if(ORDER.some(c=>S.ink[c]<0.12))return['พร้อมใช้งาน','ตรวจระดับหมึกด้วยตาที่แท็งก์ด้านขวาของเครื่อง'];
+  return['พร้อมใช้งาน',`ไม่พบข้อผิดพลาด · ตัวนับผ้าซับหมึก ${Math.round(S.padLevel*100)}%`];}
+function showStatus(){S.screen='status';drawScreen();if(!renderer.xr.isPresenting)goView('laptop');const s=statusText();say('info','สถานะเครื่อง: '+s[0]+' — '+s[1]);}
+/* ================= actions ================= */
+const INSIDE=new Set(['obj:roller','obj:sensor','obj:gecko','obj:scrap','obj:pad']);
+function hazard(a){
+  if(INSIDE.has(a)&&S.power)return['hot','ปิดเครื่องก่อนยื่นมือหรืออุปกรณ์เข้าไปในเครื่อง ลูกยางและหัวพิมพ์อาจขยับโดยไม่ทันตั้งตัว'];
+  if(a==='obj:scanner'&&!S.lidOpen&&S.power)return['hot','ห้ามยกชุดสแกนเนอร์ขณะเครื่องทำงาน หัวพิมพ์เคลื่อนที่อยู่ข้างใน ปิดเครื่องและถอดปลั๊กก่อน'];
+  if(a.startsWith('obj:cap')&&S.tool&&S.tool.startsWith('bottle')){const c=a.slice(7);
+    if(!S.caps[c])return['warn','เปิดจุกแท็งก์ก่อนเติมหมึก'];
+    if(S.tool!=='bottle'+c)return['hot',`เติมผิดสี! ${TOOLNAME[S.tool]} ลงแท็งก์สี ${c} หมึกจะผสมกันในแท็งก์และสายหมึก ต้องล้างระบบหมึกทั้งชุด`];}
+  return C.why(a);}
+function reason(a){
+  if(a==='obj:plug'&&S.plugged&&S.power)return['warn','กดปิดเครื่องก่อนถอดปลั๊ก ให้หัวพิมพ์กลับไปจอดและปิดฝาครอบ ไม่อย่างนั้นหมึกที่หัวพิมพ์อาจแห้ง'];
+  if(a==='obj:btnPower'&&!S.plugged)return['warn','ยังไม่ได้เสียบปลั๊ก เครื่องจึงเปิดไม่ติด'];
+  if(a==='obj:btnPower'&&S.lidOpen)return['warn','ปิดชุดสแกนเนอร์ให้สนิทก่อนเปิดเครื่อง'];
+  if((a==='tool:nozzle'||a==='tool:test')&&!S.paperIn)return['warn','ยังไม่มีกระดาษในช่องป้อน'];
+  return['warn',mode==='practice'?`ยังไม่ใช่ขั้นนี้ ขั้นปัจจุบันคือ “${cur().title}”`:'ยังไม่ใช่ขั้นนี้ ลองคิดลำดับการทำงานอีกครั้ง'];}
+function selectTool(t){sfx.click();S.tool=t==='none'?null:(S.tool===t?null:t);renderTools();}
+function evidencePrint(kind){
+  if(!S.power||!S.plugged)return say('info','เครื่องปิดอยู่ จึงยังสั่งพิมพ์ไม่ได้');
+  if(S.counterFull)return say('info','เครื่องไม่รับงานพิมพ์ ไฟกระดาษและไฟหมึกกะพริบสลับกัน');
+  if(sensorFault())return say('info','เครื่องไม่รับงานพิมพ์ ไฟกะพริบสลับและแจ้งว่ากระดาษติด');
+  if(!S.paperIn)return say('info','ยังไม่มีกระดาษในช่องป้อน');
+  S.busy=true;printPage(kind,()=>{S.busy=false;say('info',kind==='nozzle'?'ดูแผ่นตรวจหัวพิมพ์บนถาด เส้นสีไหนขาดหรือหายไปบ้าง':'ดูงานพิมพ์บนถาด สีครบไหม ภาพตรงไหม');renderAll();});}
+function act(a,src){
+  if(replaying&&src!=='replay')return;
+  if(!S||S.done||S.busy)return;
+  if(src!=='replay')S.log.push(['act',a]);
+  if(a==='obj:btnInk')a='tool:clean';
+  if(a.startsWith('pick:'))return selectTool(a.slice(5));
+  if(S.start===null)S.start=performance.now();
+  if(a.startsWith('tool:')&&a!=='tool:status'&&S.screen==='status')S.screen='util';
+  const isStep=S.phase==='repair'&&cur().a===a;
+  if(a==='tool:status'&&!isStep)return showStatus();
+  if(a==='obj:tanks'&&!isStep){if(!renderer.xr.isPresenting)goView('tanks');return say('info',levelsText());}
+  if(a==='obj:btnPaper')return say('info','ปุ่มกระดาษใช้สั่งให้เครื่องทำงานต่อหลังใส่กระดาษหรือแก้กระดาษติดแล้ว');
+  if(S.phase==='quiz'){if(a==='tool:nozzle'||a==='tool:test')return evidencePrint(a==='tool:nozzle'?'nozzle':'photo');
+    return say('info','ตอบคำถามวินิจฉัยก่อนเริ่มซ่อม ระหว่างนี้หาหลักฐานได้จากสถานะเครื่อง ระดับหมึก และการพิมพ์ทดสอบ');}
+  const h=hazard(a);if(h)return penalize(h[0],h[1]);
+  if(a.startsWith('tool:')&&(!S.power||!S.plugged))return penalize('warn','เครื่องปิดอยู่ เปิดเครื่องก่อนจึงสั่งงานจากโปรแกรมได้');
+  if(S.counterFull&&(a==='tool:nozzle'||a==='tool:test'||a==='tool:clean'||a==='tool:flush'))return penalize('warn','เครื่องหยุดทำงานเพราะตัวนับผ้าซับหมึกเต็ม สั่งพิมพ์หรือล้างหัวพิมพ์ไม่ได้');
+  if(isStep){const st=cur();
+    if(st.tool&&S.tool!==st.tool)return penalize('warn',mode==='practice'?st.toolMsg:'อุปกรณ์ในมือไม่เหมาะกับงานนี้');
+    if((a==='tool:nozzle'||a==='tool:test')&&!S.paperIn)return penalize('warn','ยังไม่มีกระดาษในช่องป้อน');
+    S.busy=true;st.run(advance);renderAll();return;}
+  const r=reason(a);penalize(r[0],r[1]);}
+function answer(i,src){
+  if(replaying&&src!=='replay')return;
+  if(!S||S.phase!=='quiz'||S.busy)return;
+  if(src!=='replay')S.log.push(['answer',i]);
+  if(S.start===null)S.start=performance.now();S.quizTries++;const q=C.quiz;
+  if(i===q.ans){S.phase='repair';S.screen='util';sfx.ok();say('ok',(S.mystery?'วินิจฉัยถูกต้อง เคสนี้คือ “'+C.title+'” ':'วินิจฉัยถูกต้อง ')+q.why);renderFile();speakNext();}
+  else penalize('warn','ยังไม่ใช่สาเหตุหลัก'+(mode==='practice'?' คำใบ้: '+q.hint:' ลองหาหลักฐานเพิ่มแล้วตอบใหม่'));
+  renderAll();}
+function statusOk(src){if(replaying&&src!=='replay')return;if(!S)return;if(src!=='replay')S.log.push(['statusok']);S.screen=S.phase==='quiz'?'quiz':'util';drawScreen();}
+
+/* ================= laptop screen ================= */
+let screenBtns=[],hintPulse=false;
+function rr(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
+function sbtn(g,x,y,w,h,label,sub,act,hl){g.fillStyle=hl?'#0b8db0':'#ffffff';rr(g,x,y,w,h,14);g.fill();g.strokeStyle=hl?'#0b8db0':'#c5cdd4';g.lineWidth=2;g.stroke();
+  g.fillStyle=hl?'#ffffff':'#1d2630';g.font='600 30px "IBM Plex Sans Thai",sans-serif';const lines=wrap(g,label,w-36);const lh=36,ty=y+(sub?h/2-6-(lines.length-1)*lh/2:h/2+11-(lines.length-1)*lh/2);
+  lines.slice(0,3).forEach((l,i)=>g.fillText(l,x+18,ty+i*lh));
+  if(sub){g.fillStyle=hl?'#d6f4fb':'#6b7682';g.font='500 20px "IBM Plex Mono",monospace';g.fillText(sub,x+18,y+h-20);}screenBtns.push({x,y,w,h,act});}
+function drawScreen(){if(!S)return;const g=SC.getContext('2d');screenBtns=[];
+  g.fillStyle='#e9eef2';g.fillRect(0,0,1024,640);g.fillStyle='#22303c';g.fillRect(0,0,1024,64);
+  g.fillStyle='#fff';g.font='600 27px "IBM Plex Sans Thai",sans-serif';g.fillText('โปรแกรมดูแลเครื่องพิมพ์',28,42);
+  const on=S.power&&S.plugged;g.fillStyle=on?'#3ccf6e':'#8c96a0';g.beginPath();g.arc(986,32,9,0,7);g.fill();
+  g.font='500 20px "IBM Plex Sans Thai",sans-serif';g.textAlign='right';g.fillText(on?'เชื่อมต่อแล้ว':'ไม่พบเครื่อง',966,39);g.textAlign='left';
+  const prac=mode==='practice'&&!S.done;
+  if(S.resetting){g.fillStyle='#1d2630';g.font='600 34px "IBM Plex Sans Thai",sans-serif';g.fillText('กำลังรีเซ็ตตัวนับผ้าซับหมึก…',60,260);
+    g.fillStyle='#c5cdd4';rr(g,60,300,900,26,13);g.fill();}
+  else if(S.screen==='status'){const s=statusText();g.fillStyle='#fff';rr(g,120,110,784,400,18);g.fill();g.strokeStyle='#c5cdd4';g.lineWidth=2;g.stroke();
+    const bad=s[0]!=='พร้อมใช้งาน';g.fillStyle=bad?'#d6452a':'#2a8a45';g.beginPath();g.arc(190,190,30,0,7);g.fill();
+    g.fillStyle='#fff';g.font='700 38px sans-serif';g.textAlign='center';g.fillText(bad?'!':'✓',190,203);g.textAlign='left';
+    g.fillStyle='#1d2630';g.font='700 36px "IBM Plex Sans Thai",sans-serif';g.fillText(s[0],245,203);
+    g.font='500 28px "IBM Plex Sans Thai",sans-serif';g.fillStyle='#3a4652';wrap(g,s[1],680).slice(0,3).forEach((l,i)=>g.fillText(l,160,290+i*40));
+    sbtn(g,700,420,170,70,'ตกลง',null,'status:ok',false);}
+  else if(S.phase==='quiz'){g.fillStyle='#1d2630';g.font='600 32px "IBM Plex Sans Thai",sans-serif';
+    wrap(g,'วินิจฉัย: '+C.quiz.q,960).slice(0,2).forEach((l,i)=>g.fillText(l,32,118+i*40));
+    C.quiz.opts.forEach((o,i)=>sbtn(g,32,200+i*112,960,98,o,null,'quiz:'+i,false));}
+  else{const want=prac&&S.phase==='repair'?cur().a:null;
+    UTIL.forEach((u,i)=>{const col=i%3,row=Math.floor(i/3);sbtn(g,32+col*325,96+row*222,305,200,u.t,u.s,u.a,want===u.a&&hintPulse);});}
+  g.fillStyle='#22303c';g.fillRect(0,552,1024,88);g.fillStyle='#fff';g.font='500 24px "IBM Plex Sans Thai",sans-serif';
+  wrap(g,S.lastMsg||'',980).slice(0,2).forEach((l,i)=>g.fillText(l,24,588+i*32));
+  screenTex.needsUpdate=true;}
+function screenAct(uv){if(!uv)return;const x=uv.x*1024,y=(1-uv.y)*640;const b=screenBtns.find(b=>x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h);if(!b)return;
+  if(b.act.startsWith('quiz:'))return answer(+b.act.slice(5));
+  if(b.act==='status:ok')return statusOk();
+  act(b.act);}
+
+/* ================= panel UI ================= */
+const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');
+function renderCases(){const best=bestScores();
+  const items=CASE_META.map((c,i)=>({i,n:'0'+(i+1),t:c.title,s:c.short,k:c.id})).concat([{i:5,n:'??',t:'เคสปริศนา',s:'สุ่มอาการ ไม่บอกล่วงหน้า ต้องหาหลักฐานเอง',k:'mystery',mys:true}]);
+  $('cases').innerHTML=items.map(c=>`<button class="case${c.mys?' mys':''}" data-i="${c.i}" aria-pressed="${c.i===caseIdx}"><span class="n">${c.n}</span><span><span class="t">${c.t}</span>${best[c.k]!=null?`<span class="best">ดีที่สุด ${best[c.k]}</span>`:''}<br><span class="s">${c.s}</span></span></button>`).join('');
+  $('cases').querySelectorAll('.case').forEach(b=>b.onclick=()=>{caseIdx=+b.dataset.i;reset();});}
+function paintUnknown(cv){const g=cv.getContext('2d'),W=cv.width,H=cv.height;g.fillStyle='#fff';g.fillRect(0,0,W,H);
+  g.fillStyle='#d5dbe0';g.font=`700 ${W*.5}px "Chakra Petch",sans-serif`;g.textAlign='center';g.fillText('?',W/2,H*.56);
+  g.fillStyle='#6b7682';g.font=`500 ${W*.06}px "IBM Plex Sans Thai",sans-serif`;g.fillText('ยังไม่มีตัวอย่างงานพิมพ์',W/2,H*.75);g.textAlign='left';}
+function renderFile(){const hide=S.mystery&&S.phase==='quiz';$('caseNo').textContent='ใบแจ้งซ่อม · '+(S.mystery?'เคสปริศนา':'เคส 0'+(caseIdx+1));
+  $('caseTitle').textContent=hide?'ยังไม่ทราบสาเหตุ':C.title;$('caseSym').textContent=hide?MYS_SYM:C.sym;(hide?paintUnknown:C.thumb)($('thumb'));}
+function renderQuiz(){const box=$('quizBox');box.hidden=S.phase!=='quiz';if(box.hidden)return;$('quizQ').textContent=C.quiz.q;
+  $('quizOpts').innerHTML=C.quiz.opts.map((o,i)=>`<button class="opt" data-i="${i}">${o}</button>`).join('');
+  $('quizOpts').querySelectorAll('.opt').forEach(b=>b.onclick=()=>answer(+b.dataset.i));}
+function renderSteps(){if(S.phase==='quiz'){$('steps').innerHTML='<li><p class="locked">ตอบคำถามวินิจฉัยให้ถูกก่อน ขั้นตอนการซ่อมจะปรากฏที่นี่</p></li>';return;}
+  $('steps').innerHTML=C.steps.map((s,i)=>{const st=i<S.cur?'done':(i===S.cur&&!S.done?'now':'todo');const show=mode==='practice'||i<S.cur;
+    return `<li class="${st}"><span class="num">${st==='done'?'✓':i+1}</span><div><div class="t">${show?s.title:'• • •'}</div>${st==='now'&&mode==='practice'?`<div class="h">${s.how}</div>`:''}</div></li>`;}).join('');}
+function renderUtil(){const want=mode==='practice'&&S.phase==='repair'&&!S.done?cur().a:null;
+  $('util').innerHTML=UTIL.map(u=>`<button class="ub${want===u.a?' hint':''}" data-a="${u.a}"><span class="t">${u.t}</span><span class="s">${u.s}</span></button>`).join('');
+  $('util').querySelectorAll('.ub').forEach(b=>b.onclick=()=>{audio();act(b.dataset.a);});}
+function renderTools(){const st=S.phase==='repair'&&!S.done?cur():null;const want=mode==='practice'&&st&&st.tool&&S.tool!==st.tool?st.tool:'';
+  const items=[[null,'มือเปล่า','']].concat(Object.keys(TOOLNAME).map(k=>[k,TOOLNAME[k],k.startsWith('bottle')?'#'+INKHEX[k.slice(6)].toString(16).padStart(6,'0'):'']));
+  $('tools').innerHTML=items.map(([k,n,c])=>`<button class="tb${k===want?' hint':''}" data-k="${k||''}" aria-pressed="${S.tool===k}">${c?`<i style="background:${c}"></i>`:''}${n}</button>`).join('');
+  $('tools').querySelectorAll('.tb').forEach(b=>b.onclick=()=>act('pick:'+(b.dataset.k||'none')));
+  $('handChip').textContent=S.tool?TOOLNAME[S.tool]:'มือเปล่า';}
+function renderGauges(){$('gScore').textContent=S.score;
+  const t=S.done?S.elapsed:(S.start?(performance.now()-S.start)/1000:0);$('gTime').textContent=fmt(t);
+  $('gProg').textContent=S.phase==='quiz'?'วินิจฉัย':(S.done?'เสร็จสมบูรณ์':`ขั้น ${Math.min(S.cur+1,C.steps.length)} จาก ${C.steps.length}`);
+  $('gPower').textContent=(S.power?'เปิด':'ปิด')+' · '+(S.plugged?'เสียบปลั๊ก':'ถอดปลั๊ก');}
+function renderAll(){renderQuiz();renderSteps();renderUtil();renderTools();renderGauges();drawScreen();}
+$('views').innerHTML=Object.entries(VIEWS).map(([k,v])=>`<button class="hbtn" data-v="${k}">${v[0]}</button>`).join('');
+$('views').querySelectorAll('.hbtn').forEach(b=>b.onclick=()=>goView(b.dataset.v));
+
+let xray=false,showLabels=false;
+function setXray(on){xray=on;$('tXray').setAttribute('aria-pressed',on);SHELL.forEach(m=>{m.transparent=on;m.opacity=on?0.13:1;m.depthWrite=!on;m.needsUpdate=true;});}
+$('tXray').onclick=()=>setXray(!xray);
+$('tLabels').onclick=()=>{showLabels=!showLabels;$('tLabels').setAttribute('aria-pressed',showLabels);$('labels').hidden=!showLabels;};
+$('tSound').onclick=()=>{soundOn=!soundOn;$('tSound').setAttribute('aria-pressed',soundOn);};
+
+/* labels */
+const LBL=[[carriage,'หัวพิมพ์',0.35],[tanksBody,'แท็งก์หมึก',1.45],[roller,'ลูกยางดึงกระดาษ',0.2],[sensor,'เซ็นเซอร์กระดาษ',0.35],[pad,'ผ้าซับหมึก',0.15],
+  [stack,'ช่องป้อนกระดาษ',0.9],[scan,'ชุดสแกนเนอร์',0.5],[board,'แผงวงจรหลัก',0.45],[tubes,'สายส่งหมึก',1.35],[btnPower,'ปุ่มควบคุม',0.2],[plug,'ปลั๊กไฟ',0.25],[laptop,'โปรแกรมไดรเวอร์',2.1]];
+$('labels').hidden=true;
+$('labels').innerHTML=LBL.map(l=>`<div class="lbl">${l[1]}</div>`).join('');
+const lblEls=[...$('labels').children];const _v=new THREE.Vector3();
+function drawLabels(){if(!showLabels||renderer.xr.isPresenting)return;const w=stage.clientWidth,h=stage.clientHeight;
+  LBL.forEach((l,i)=>{l[0].getWorldPosition(_v);if(l[0]===tubes)_v.set(1.2,1.3,-0.7);_v.y+=l[2];_v.project(camera);const el=lblEls[i];
+    if(_v.z>1||!l[0].visible){el.style.display='none';return;}el.style.display='';el.style.left=((_v.x+1)/2*w)+'px';el.style.top=((1-_v.y)/2*h)+'px';});}
+
+/* ================= picking ================= */
+const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
+function visibleChain(o){while(o){if(!o.visible)return false;o=o.parent;}return true;}
+function pickFromRay(){const hits=ray.intersectObjects(rig.children,true);
+  for(const h of hits){if(h.object.userData.noPick||!visibleChain(h.object))continue;if(h.object===arShadow)continue;
+    let o=h.object;while(o&&!o.userData.key)o=o.parent;if(xray&&h.object.userData.shell&&!o)continue;return o?{key:o.userData.key,uv:h.uv}:null;}return null;}
+function setRay(e){const r=renderer.domElement.getBoundingClientRect();ndc.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);ray.setFromCamera(ndc,camera);}
+function handlePick(p){if(!p)return;if(p.key==='screen')return screenAct(p.uv);act(p.key);}
+let down=null,hover=null;const cv=renderer.domElement,tip=$('tip');
+cv.addEventListener('pointerdown',e=>{audio();down={x:e.clientX,y:e.clientY};});
+cv.addEventListener('pointerup',e=>{if(!down)return;const d=Math.hypot(e.clientX-down.x,e.clientY-down.y);down=null;if(d<7){setRay(e);handlePick(pickFromRay());}});
+cv.addEventListener('pointermove',e=>{if(e.pointerType!=='mouse'||e.buttons){tip.hidden=true;return;}setRay(e);const p=pickFromRay();hover=p?p.key:null;
+  cv.style.cursor=hover?'pointer':'grab';
+  if(hover){const r=stage.getBoundingClientRect();tip.hidden=false;tip.style.left=(e.clientX-r.left)+'px';tip.style.top=(e.clientY-r.top)+'px';
+    tip.textContent=NAMES[hover]+(hover==='obj:tanks'?' · '+levelsText():'')+(S.tool&&!hover.startsWith('pick:')&&hover!=='screen'?' · ใช้ '+TOOLNAME[S.tool]:'');}else tip.hidden=true;});
+cv.addEventListener('pointerleave',()=>{hover=null;tip.hidden=true;});
+
+/* ================= WebXR ================= */
+let xrMode=null,hitSource=null,placed=false;
+const reticle=new THREE.Mesh(new THREE.RingGeometry(0.07,0.09,40).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xffffff}));
+reticle.matrixAutoUpdate=false;reticle.visible=false;scene.add(reticle);
+const tmpM=new THREE.Matrix4();
+for(let i=0;i<2;i++){const c=renderer.xr.getController(i);
+  const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0),new THREE.Vector3(0,0,-1)]),new THREE.LineBasicMaterial({color:0x3fc1e2}));line.scale.z=4;c.add(line);
+  c.addEventListener('connected',e=>{line.visible=e.data.targetRayMode==='tracked-pointer';});
+  c.addEventListener('select',()=>{audio();
+    if(xrMode==='immersive-ar'&&!placed){if(!reticle.visible)return;rig.position.setFromMatrixPosition(reticle.matrix);
+      const cam=renderer.xr.getCamera(camera);const cp=new THREE.Vector3().setFromMatrixPosition(cam.matrixWorld);
+      rig.rotation.y=Math.atan2(cp.x-rig.position.x,cp.z-rig.position.z);rig.visible=true;placed=true;reticle.visible=false;
+      $('xrMsg').textContent='วางเครื่องแล้ว แตะชิ้นส่วนเพื่อซ่อม เดินเข้าไปดูใกล้ ๆ ได้';return;}
+    tmpM.identity().extractRotation(c.matrixWorld);ray.ray.origin.setFromMatrixPosition(c.matrixWorld);ray.ray.direction.set(0,0,-1).applyMatrix4(tmpM);
+    handlePick(pickFromRay());});
+  scene.add(c);}
+async function enterXR(mode){if(!navigator.xr)return;
+  try{const init=mode==='immersive-ar'?{requiredFeatures:['hit-test'],optionalFeatures:['dom-overlay','local-floor'],domOverlay:{root:$('xrOverlay')}}:{requiredFeatures:['local-floor'],optionalFeatures:['hand-tracking']};
+    const session=await navigator.xr.requestSession(mode,init);
+    renderer.xr.setReferenceSpaceType(mode==='immersive-ar'?'local':'local-floor');
+    await renderer.xr.setSession(session);xrMode=mode;
+    if(mode==='immersive-ar'){$('xrOverlay').hidden=false;placed=false;rig.visible=false;scene.background=null;deskGroup.visible=false;arShadow.visible=true;
+      rig.scale.setScalar(0.1);rig.rotation.y=0;
+      session.requestReferenceSpace('viewer').then(vs=>session.requestHitTestSource({space:vs})).then(s=>{hitSource=s;}).catch(()=>{});}
+    else{rig.scale.setScalar(0.1);rig.position.set(0,0.78,-0.95);rig.rotation.y=0;}
+  }catch(e){say('warn','เปิดโหมด '+(mode==='immersive-ar'?'AR':'VR')+' ไม่ได้ในหน้าต่างนี้ เปิดไฟล์จากเว็บไซต์ https บนอุปกรณ์ที่รองรับแทน');}}
+renderer.xr.addEventListener('sessionend',()=>{xrMode=null;hitSource=null;$('xrOverlay').hidden=true;rig.visible=true;deskGroup.visible=true;arShadow.visible=false;reticle.visible=false;
+  rig.scale.setScalar(1);rig.position.set(0,0,0);rig.rotation.y=0;setTimeout(()=>{applyTheme();resize();},0);});
+$('btnAR').onclick=()=>enterXR('immersive-ar');$('btnVR').onclick=()=>enterXR('immersive-vr');
+$('xrExit').onclick=()=>{const s=renderer.xr.getSession();if(s)s.end();};
+$('xrOverlay').addEventListener('beforexrselect',e=>e.preventDefault());
+(async function(){let ar=false,vr=false;
+  if(navigator.xr){try{vr=await navigator.xr.isSessionSupported('immersive-vr');}catch(e){}try{ar=await navigator.xr.isSessionSupported('immersive-ar');}catch(e){}}
+  $('btnAR').disabled=!ar;$('btnVR').disabled=!vr;
+  $('xrNote').textContent=(ar||vr)?`อุปกรณ์นี้รองรับ${ar?' AR':''}${ar&&vr?' และ':''}${vr?' VR':''} ในโหมด AR ให้ส่องกล้องไปที่พื้นโต๊ะแล้วแตะเพื่อวางเครื่องขนาดจริง`
+    :'หน้าต่างนี้ยังเปิด AR/VR ไม่ได้ ให้นำไฟล์ HTML ไปไว้บนเว็บไซต์ https แล้วเปิดด้วย Chrome บนมือถือ Android (AR) หรือเบราว์เซอร์ของแว่น Meta Quest (VR และ AR)';})();
+
+/* ================= local best scores ================= */
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function saveLocal(){const b=LS.get('itl_best',{});const k=S.mystery?'mystery':C.id;b[k]=Math.max(b[k]??0,S.score);LS.set('itl_best',b);}
+function bestScores(){return LS.get('itl_best',{});}
+
+/* ================= voice narration (Web Speech API) ================= */
+const tts=window.speechSynthesis||null;let voiceOn=true,thVoice=null,voiceWarned=false;
+function pickVoice(){if(!tts)return;const vs=tts.getVoices();thVoice=vs.find(v=>/^th(-|_|$)/i.test(v.lang))||null;}
+if(tts){pickVoice();try{tts.addEventListener('voiceschanged',pickVoice);}catch(e){tts.onvoiceschanged=pickVoice;}}
+function chunks(t){const out=[];let cur='';String(t).replace(/[“”"]/g,'').split(/\s+/).forEach(w=>{if((cur+' '+w).length>150&&cur){out.push(cur);cur=w;}else cur=cur?cur+' '+w:w;});if(cur)out.push(cur);return out;}
+function speak(text,flush){if(!voiceOn||!tts||!text)return;
+  if(!thVoice){pickVoice();if(!thVoice){if(!voiceWarned){voiceWarned=true;$('toastTag').className='tag';$('toastTag').textContent='เสียงพากย์';
+    $('toastText').textContent='อุปกรณ์นี้ไม่มีเสียงอ่านภาษาไทย ลองเปิดด้วย Chrome หรือ Edge หรือติดตั้งเสียงภาษาไทยในการตั้งค่าเครื่อง';$('toast').hidden=false;}return;}}
+  if(flush)tts.cancel();
+  chunks(text).forEach(c=>{const u=new SpeechSynthesisUtterance(c);u.lang='th-TH';u.voice=thVoice;u.rate=1;u.pitch=1;tts.speak(u);});}
+function speakNext(){if(mode!=='practice'||S.done||S.phase!=='repair')return;const st=cur();speak('ขั้นต่อไป '+st.title+' '+st.how,false);}
+$('tVoice').onclick=()=>{voiceOn=!voiceOn;$('tVoice').setAttribute('aria-pressed',voiceOn);if(!voiceOn&&tts)tts.cancel();else speak('เปิดเสียงพากย์แล้ว',true);};
+
+/* ================= finish & result ================= */
+function finish(){S.done=true;setTimeout(()=>speak(`ปิดงานซ่อมแล้ว ได้ ${S.score} คะแนน`+(S.mistakes.length?` มีจุดที่ควรทบทวน ${S.mistakes.length} จุด ดูรายละเอียดในสรุปผล`:' ทำได้ถูกต้องครบทุกขั้น'),false),50);S.elapsed=(performance.now()-(S.start||performance.now()))/1000;sfx.done();
+  if(!replaying){lastRun={def:runDef,log:S.log.slice(),mode};saveLocal();}
+  renderResult();renderCases();}
+function renderResult(){const grade=S.score>=90?'ดีเยี่ยม':S.score>=70?'ผ่าน':'ควรฝึกเพิ่ม';const r=$('result');r.hidden=false;
+  const ms=S.mistakes.length?`<ul class="mlist">${S.mistakes.map(m=>`<li class="${m.kind}">${m.kind==='hot'?'อันตราย':'ผิดลำดับ'} · ขั้น ${esc(m.step)}: ${esc(m.msg)}</li>`).join('')}</ul>`:'<p>ไม่มีจุดผิดพลาด ทำครบถูกต้องทุกขั้น</p>';
+  r.innerHTML=`<h2>ปิดงานซ่อม · ${grade}</h2><dl><dt>เคส</dt><dd>${S.mystery?'ปริศนา → ':''}${esc(C.title)}</dd><dt>โหมด</dt><dd>${mode==='practice'?'ฝึก':'ทดสอบ'}</dd>
+  <dt>คะแนน</dt><dd>${S.score} / 100</dd><dt>เวลา</dt><dd>${fmt(S.elapsed)}</dd><dt>ทำผิดลำดับ</dt><dd>${S.wrong} ครั้ง</dd><dt>ทำสิ่งอันตราย</dt><dd>${S.hazard} ครั้ง</dd></dl>
+  <p><b>จุดที่ควรทบทวน</b></p>${ms}<p style="margin-top:10px"><b>ข้อแนะนำหลังซ่อม</b> ${C.tip}</p>
+  <div class="rbtns"><button id="rReplay">ดูการซ่อมย้อนหลัง</button><button class="sec" id="rAgain">ฝึกอีกครั้ง</button></div>`;
+  $('rReplay').onclick=startReplay;$('rAgain').onclick=reset;}
+
+/* ================= replay ================= */
+let replaying=false,rpTimer=null,lastRun=null,flashKey=null,flashT=-9;
+function syncModeBtns(){$('mPractice').setAttribute('aria-pressed',mode==='practice');$('mTest').setAttribute('aria-pressed',mode==='test');}
+function stopReplay(){replaying=false;clearTimeout(rpTimer);$('replayBar').hidden=true;}
+function startReplay(){if(!lastRun)return;stopReplay();replaying=true;mode=lastRun.mode;syncModeBtns();setupCase(lastRun.def);
+  $('replayBar').hidden=false;const log=lastRun.log;let i=0;$('rpInfo').textContent=`0 / ${log.length}`;
+  say('info','เริ่มเล่นการซ่อมย้อนหลัง จุดที่ทำผิดจะขึ้นแถบสีส้มหรือสีแดง');goView('overview');
+  const next=()=>{if(!replaying)return;if(S.busy){rpTimer=setTimeout(next,200);return;}
+    if(i>=log.length){replaying=false;$('replayBar').hidden=true;if(!S.done)say('info','จบการเล่นย้อนหลัง');return;}
+    const e=log[i++];$('rpInfo').textContent=`${i} / ${log.length}`;
+    if(e[0]==='act'){flashKey=e[1]==='obj:btnInk'?'obj:btnInk':e[1];flashT=time;act(e[1],'replay');}
+    else if(e[0]==='answer')answer(e[1],'replay');else statusOk('replay');
+    rpTimer=setTimeout(next,reduce?500:1400);};
+  rpTimer=setTimeout(next,1000);}
+$('rpStop').onclick=()=>{stopReplay();say('info','หยุดเล่นย้อนหลังแล้ว กด “เริ่มเคสนี้ใหม่” เพื่อฝึกต่อ');};
+
+/* ================= case setup ================= */
+let runDef=null;
+function newDef(){if(caseIdx===5){const id=CASE_META[Math.floor(Math.random()*5)].id;const p=randParams(id);p.order=shuffle([0,1,2,3,4]);return{id,params:p,mystery:true};}
+  const id=CASE_META[caseIdx].id;return{id,params:randParams(id),mystery:false};}
+function setupCase(def){runDef=def;S=fresh();S.mystery=def.mystery;C=buildCase(def.id,def.params);if(def.mystery)mysterize(C,def.params.order);
+  C.init(S);anims=[];applyPhysical();$('result').hidden=true;$('toast').hidden=true;renderCases();renderFile();renderAll();}
+function reset(){stopReplay();setupCase(newDef());
+  say('info',S.mystery?'เคสปริศนา: หาหลักฐานจากไฟหน้าเครื่อง สถานะเครื่อง ระดับหมึก และการพิมพ์ตรวจหัวพิมพ์ แล้วจึงตอบว่าสาเหตุคืออะไร'
+    :(mode==='practice'?'อ่านใบแจ้งซ่อม แล้วเลือกสาเหตุที่น่าจะเป็น ชิ้นส่วนที่ต้องคลิกจะเรืองแสงเป็นจังหวะ':'โหมดทดสอบไม่มีคำใบ้ ผิดลำดับหัก 10 คะแนน ทำสิ่งอันตรายหัก 20 คะแนน'));
+  speak((S.mystery?'ใบแจ้งซ่อม เคสปริศนา '+MYS_SYM:'ใบแจ้งซ่อม '+C.title+' '+C.sym)+' คำถาม '+C.quiz.q,false);}
+function setMode(m){mode=m;syncModeBtns();reset();}
+$('mPractice').onclick=()=>setMode('practice');$('mTest').onclick=()=>setMode('test');$('reset').onclick=reset;
+
+/* ================= loop ================= */
+function resize(){if(renderer.xr.isPresenting)return;const w=stage.clientWidth,h=stage.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+new ResizeObserver(resize).observe(stage);resize();
+
+const clock=new THREE.Clock();let time=0,uiT=0,scT=0;
+const cOn=new THREE.Color(0x45e07a),cOff=new THREE.Color(0x1d2a22),oOn=new THREE.Color(0xff9a2e),oOff=new THREE.Color(0x2b241c);
+renderer.setAnimationLoop((ts,frame)=>{
+  const dt=Math.min(clock.getDelta(),0.1);time+=dt;tick(dt);
+  if(frame&&xrMode==='immersive-ar'&&hitSource&&!placed){const hits=frame.getHitTestResults(hitSource);
+    if(hits.length){const pose=hits[0].getPose(renderer.xr.getReferenceSpace());reticle.visible=true;reticle.matrix.fromArray(pose.transform.matrix);}else reticle.visible=false;}
+  if(S){
+    // LEDs
+    const on=S.power&&S.plugged;let p=0,pa=0,ink=0;
+    if(on){const alt=Math.floor(time*2.4)%2===0;p=S.printing?(Math.floor(time*3)%2?1:0.2):1;
+      if(sensorFault()||S.counterFull){pa=alt?1:0;ink=alt?0:1;}else if(feedFault()||!S.paperIn)pa=Math.floor(time*2)%2?1:0;
+      if(ORDER.some(c=>S.ink[c]<0.12))ink=1;}
+    ledPow.color.copy(cOff).lerp(cOn,p);ledPaper.color.copy(oOff).lerp(oOn,pa);ledInk.color.copy(oOff).lerp(oOn,ink);
+    // hints & hover glow
+    let hintKey=null;if(mode==='practice'&&!S.done&&!S.busy&&S.phase==='repair'){const st=cur();hintKey=(st.tool&&S.tool!==st.tool)?'pick:'+st.tool:st.a;}
+    const pulse=0.1+0.14*(0.5+0.5*Math.sin(time*4));
+    for(const k in inter){if(k==='screen')continue;const a=(k===flashKey&&time-flashT<1.1)?0.7:(k===hover?0.4:(k===hintKey?(reduce?0.2:pulse):0));
+      inter[k].traverse(m=>{if(m.userData.glow)m.material.emissive.copy(accent).multiplyScalar(a);});}
+    // held tool lifts
+    Object.entries(tools).forEach(([k,t])=>{if(t.userData.anim)return;const ty=t.userData.baseY+(S.tool===k?0.35:0);t.position.y+=(ty-t.position.y)*Math.min(1,dt*10);});
+    if(gecko.visible)geckoTail.rotation.y=Math.sin(time*2.2)*0.35;
+    scT+=dt;if(scT>0.5){scT=0;const want=hintKey&&hintKey.startsWith('tool:');if(want||hintPulse){hintPulse=want?!hintPulse:false;drawScreen();}}
+    uiT+=dt;if(uiT>0.25){uiT=0;renderGauges();}
+  }
+  drawLabels();
+  controls.update();renderer.render(scene,camera);
+});
+
+reset();
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{if(S){drawScreen();C.thumb($('thumb'));}});
+})();
+</script>
+
+</body>
+</html>
